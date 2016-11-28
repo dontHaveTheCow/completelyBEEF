@@ -1,0 +1,6 @@
+09:55:04 **** Incremental Build of configuration Debug for project stm32f0discovery_stdperiph_lib ****
+make all 
+make: Nothing to be done for 'all'.
+
+09:55:04 Build Finished (took 71ms)
+
