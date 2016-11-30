@@ -1,11 +1,3 @@
-/*
- *
- * Sd card's SPI speed should have a frequency in the range of 100 to 400 kHz at initialization process.
- * Xbee's SPI transfer speed
- *
- *
- *
- */
 #include "stm32f0xx_gpio.h"
 #include "sdCard.h"
 #include "SPI1.h"
@@ -13,6 +5,8 @@
 #include "IndicationGPIOs.h"
 #include <string.h>
 #include <stdlib.h>
+
+#define DISCOVRY 1
 
 int main(void){
 	uint8_t buffer[512];
@@ -26,35 +20,58 @@ int main(void){
 	char FATinfoString[30] = "";
 	char FATchar[8];
 
-	uint16_t i;
+	uint16_t i = 0;
 
 	uint8_t sdStatus;
 
 	initialiseSysTick();
 	InitialiseSPI1_GPIO();
 	InitialiseSPI1();
-	initializeRedLed1();
-	initializeGreenLed1();
+	if(DISCOVRY == 0){
+		initializeRedLed1();
+		initializeGreenLed1();
+	}
+	else{
+		/*
+		 * if discovery
+		 * GPIOC8, GPIOC9
+		 */
+		initializeDiscoveryLeds();
+	}
 
 	delayMs(100);
+
+	/*
+	 * Sd card's SPI speed should have a frequency in the range of 100 to 400 kHz at initialization process.
+	  */
 	sdStatus = initializeSD();
 
 	if(sdStatus == 0x01){
 
-		xorGreenLed1();
+		if(DISCOVRY == 0){
+			xorGreenLed1();
+		}
+		else{
+			GPIOC->ODR ^= GPIO_Pin_9;
+		}
 
 		findDetailsOfFAT(buffer,&fatSect,&mstrDir, &fsInfoSector);
 		findDetailsOfFile("LOGFILE",buffer,mstrDir,&filesize,&cluster,&sector);
 		findLastClusterOfFile("LOGFILE",buffer, &cluster,fatSect,mstrDir);
 
-		xorGreenLed1();
+		if(DISCOVRY == 0){
+			xorGreenLed1();
+		}
+		else{
+			GPIOC->ODR ^= GPIO_Pin_9;
+		}
 
 		if(filesize < 512)
 			filesize = 512;
 
 		appendTextToTheSD("\nNEW LOG", '\n', &sdBufferCurrentSymbol, buffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
 
-		while(i++ < 180){
+		while(i++ < 2480){
 		strcpy(&FATinfoString[0], "SIZE");
 		itoa(filesize,FATchar,10);
 		strcpy(&FATinfoString[strlen(FATinfoString)], FATchar);
@@ -70,7 +87,12 @@ int main(void){
 
 		delayMs(100);
 		while(!goToIdleState());
-		blinkGreenLed1();
+		if(DISCOVRY == 0){
+			xorGreenLed1();
+		}
+		else{
+			GPIOC->ODR ^= GPIO_Pin_9;
+		}
 		//xorGreenLed1();
 		//Debug with SPI ->>>>>>> CooCox debugger sucks DICK
 /*		SDSELECT();
@@ -91,7 +113,12 @@ int main(void){
 		SDDESELECT();*/
 	}
 	else{
-		xorRedLed1();
+		if(DISCOVRY == 0){
+			xorRedLed1();
+		}
+		else{
+			GPIOC->ODR ^= GPIO_Pin_8;
+		}
 	}
 
 	while(1){

@@ -3519,7 +3519,7 @@ LOAD /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux6
                 0x08000000                g_pfnVectors
                 0x080000c4                . = ALIGN (0x4)
 
-.text           0x080000c4     0x4e7c
+.text           0x080000c4     0x4ecc
                 0x080000c4                . = ALIGN (0x4)
  *(.text)
  .text          0x080000c4       0x60 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
@@ -3596,272 +3596,272 @@ LOAD /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux6
  .text.str_splitter
                 0x08000da0       0x44 inc/myStringFunctions.o
                 0x08000da0                str_splitter
- .text.main     0x08000de4     0x1dac src/main.o
+ .text.main     0x08000de4     0x1dc8 src/main.o
                 0x08000de4                main
  .text.USART1_IRQHandler
-                0x08002b90       0x90 src/main.o
-                0x08002b90                USART1_IRQHandler
+                0x08002bac       0x90 src/main.o
+                0x08002bac                USART1_IRQHandler
  .text.EXTI4_15_IRQHandler
-                0x08002c20      0x16c src/main.o
-                0x08002c20                EXTI4_15_IRQHandler
+                0x08002c3c      0x16c src/main.o
+                0x08002c3c                EXTI4_15_IRQHandler
  .text.TIM2_IRQHandler
-                0x08002d8c       0x34 src/main.o
-                0x08002d8c                TIM2_IRQHandler
+                0x08002da8       0x34 src/main.o
+                0x08002da8                TIM2_IRQHandler
  .text.SystemInit
-                0x08002dc0       0x8c src/system_stm32f0xx.o
-                0x08002dc0                SystemInit
+                0x08002ddc       0x8c src/system_stm32f0xx.o
+                0x08002ddc                SystemInit
  .text.SetSysClock
-                0x08002e4c       0x94 src/system_stm32f0xx.o
+                0x08002e68       0x94 src/system_stm32f0xx.o
  .text.Reset_Handler
-                0x08002ee0       0x50 startup/startup_stm32f0xx.o
-                0x08002ee0                Reset_Handler
+                0x08002efc       0x50 startup/startup_stm32f0xx.o
+                0x08002efc                Reset_Handler
  .text.Default_Handler
-                0x08002f30        0x2 startup/startup_stm32f0xx.o
-                0x08002f30                TIM1_CC_IRQHandler
-                0x08002f30                HardFault_Handler
-                0x08002f30                ADC1_COMP_IRQHandler
-                0x08002f30                PVD_IRQHandler
-                0x08002f30                PendSV_Handler
-                0x08002f30                NMI_Handler
-                0x08002f30                I2C1_IRQHandler
-                0x08002f30                SPI1_IRQHandler
-                0x08002f30                TIM6_DAC_IRQHandler
-                0x08002f30                EXTI2_3_IRQHandler
-                0x08002f30                I2C2_IRQHandler
-                0x08002f30                TIM17_IRQHandler
-                0x08002f30                RTC_IRQHandler
-                0x08002f30                TIM16_IRQHandler
-                0x08002f30                TIM3_IRQHandler
-                0x08002f30                RCC_IRQHandler
-                0x08002f30                DMA1_Channel1_IRQHandler
-                0x08002f30                Default_Handler
-                0x08002f30                CEC_IRQHandler
-                0x08002f30                TIM14_IRQHandler
-                0x08002f30                DMA1_Channel4_5_IRQHandler
-                0x08002f30                TIM15_IRQHandler
-                0x08002f30                EXTI0_1_IRQHandler
-                0x08002f30                SPI2_IRQHandler
-                0x08002f30                SVC_Handler
-                0x08002f30                TS_IRQHandler
-                0x08002f30                WWDG_IRQHandler
-                0x08002f30                DMA1_Channel2_3_IRQHandler
-                0x08002f30                USART2_IRQHandler
-                0x08002f30                FLASH_IRQHandler
-                0x08002f30                TIM1_BRK_UP_TRG_COM_IRQHandler
- *fill*         0x08002f32        0x2 
+                0x08002f4c        0x2 startup/startup_stm32f0xx.o
+                0x08002f4c                TIM1_CC_IRQHandler
+                0x08002f4c                HardFault_Handler
+                0x08002f4c                ADC1_COMP_IRQHandler
+                0x08002f4c                PVD_IRQHandler
+                0x08002f4c                PendSV_Handler
+                0x08002f4c                NMI_Handler
+                0x08002f4c                I2C1_IRQHandler
+                0x08002f4c                SPI1_IRQHandler
+                0x08002f4c                TIM6_DAC_IRQHandler
+                0x08002f4c                EXTI2_3_IRQHandler
+                0x08002f4c                I2C2_IRQHandler
+                0x08002f4c                TIM17_IRQHandler
+                0x08002f4c                RTC_IRQHandler
+                0x08002f4c                TIM16_IRQHandler
+                0x08002f4c                TIM3_IRQHandler
+                0x08002f4c                RCC_IRQHandler
+                0x08002f4c                DMA1_Channel1_IRQHandler
+                0x08002f4c                Default_Handler
+                0x08002f4c                CEC_IRQHandler
+                0x08002f4c                TIM14_IRQHandler
+                0x08002f4c                DMA1_Channel4_5_IRQHandler
+                0x08002f4c                TIM15_IRQHandler
+                0x08002f4c                EXTI0_1_IRQHandler
+                0x08002f4c                SPI2_IRQHandler
+                0x08002f4c                SVC_Handler
+                0x08002f4c                TS_IRQHandler
+                0x08002f4c                WWDG_IRQHandler
+                0x08002f4c                DMA1_Channel2_3_IRQHandler
+                0x08002f4c                USART2_IRQHandler
+                0x08002f4c                FLASH_IRQHandler
+                0x08002f4c                TIM1_BRK_UP_TRG_COM_IRQHandler
+ *fill*         0x08002f4e        0x2 
  .text.EXTI_Init
-                0x08002f34       0xe0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
-                0x08002f34                EXTI_Init
+                0x08002f50       0xe0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
+                0x08002f50                EXTI_Init
  .text.EXTI_GetITStatus
-                0x08003014       0x54 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
-                0x08003014                EXTI_GetITStatus
+                0x08003030       0x54 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
+                0x08003030                EXTI_GetITStatus
  .text.EXTI_ClearITPendingBit
-                0x08003068       0x1c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
-                0x08003068                EXTI_ClearITPendingBit
+                0x08003084       0x1c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
+                0x08003084                EXTI_ClearITPendingBit
  .text.GPIO_Init
-                0x08003084      0x130 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
-                0x08003084                GPIO_Init
+                0x080030a0      0x130 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
+                0x080030a0                GPIO_Init
  .text.GPIO_ReadInputDataBit
-                0x080031b4       0x48 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
-                0x080031b4                GPIO_ReadInputDataBit
+                0x080031d0       0x48 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
+                0x080031d0                GPIO_ReadInputDataBit
  .text.GPIO_SetBits
-                0x080031fc       0x20 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
-                0x080031fc                GPIO_SetBits
+                0x08003218       0x20 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
+                0x08003218                GPIO_SetBits
  .text.GPIO_ResetBits
-                0x0800321c       0x20 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
-                0x0800321c                GPIO_ResetBits
+                0x08003238       0x20 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
+                0x08003238                GPIO_ResetBits
  .text.GPIO_PinAFConfig
-                0x0800323c       0xa4 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
-                0x0800323c                GPIO_PinAFConfig
+                0x08003258       0xa4 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
+                0x08003258                GPIO_PinAFConfig
  .text.NVIC_Init
-                0x080032e0       0xac /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_misc.o)
-                0x080032e0                NVIC_Init
+                0x080032fc       0xac /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_misc.o)
+                0x080032fc                NVIC_Init
  .text.RCC_GetClocksFreq
-                0x0800338c      0x1d0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
-                0x0800338c                RCC_GetClocksFreq
+                0x080033a8      0x1d0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
+                0x080033a8                RCC_GetClocksFreq
  .text.RCC_AHBPeriphClockCmd
-                0x0800355c       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
-                0x0800355c                RCC_AHBPeriphClockCmd
+                0x08003578       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
+                0x08003578                RCC_AHBPeriphClockCmd
  .text.RCC_APB2PeriphClockCmd
-                0x0800359c       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
-                0x0800359c                RCC_APB2PeriphClockCmd
+                0x080035b8       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
+                0x080035b8                RCC_APB2PeriphClockCmd
  .text.RCC_APB1PeriphClockCmd
-                0x080035dc       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
-                0x080035dc                RCC_APB1PeriphClockCmd
+                0x080035f8       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
+                0x080035f8                RCC_APB1PeriphClockCmd
  .text.SPI_Init
-                0x0800361c      0x108 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
-                0x0800361c                SPI_Init
- .text.SPI_Cmd  0x08003724       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
-                0x08003724                SPI_Cmd
+                0x08003638      0x108 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+                0x08003638                SPI_Init
+ .text.SPI_Cmd  0x08003740       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+                0x08003740                SPI_Cmd
  .text.SPI_SSOutputCmd
-                0x08003764       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
-                0x08003764                SPI_SSOutputCmd
+                0x08003780       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+                0x08003780                SPI_SSOutputCmd
  .text.SPI_SendData8
-                0x080037a4       0x2c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
-                0x080037a4                SPI_SendData8
+                0x080037c0       0x2c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+                0x080037c0                SPI_SendData8
  .text.SPI_ReceiveData8
-                0x080037d0       0x24 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
-                0x080037d0                SPI_ReceiveData8
+                0x080037ec       0x24 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+                0x080037ec                SPI_ReceiveData8
  .text.SPI_I2S_GetFlagStatus
-                0x080037f4       0x48 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
-                0x080037f4                SPI_I2S_GetFlagStatus
+                0x08003810       0x48 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+                0x08003810                SPI_I2S_GetFlagStatus
  .text.SYSCFG_EXTILineConfig
-                0x0800383c       0x94 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_syscfg.o)
-                0x0800383c                SYSCFG_EXTILineConfig
+                0x08003858       0x94 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_syscfg.o)
+                0x08003858                SYSCFG_EXTILineConfig
  .text.TIM_TimeBaseInit
-                0x080038d0       0xf0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
-                0x080038d0                TIM_TimeBaseInit
- .text.TIM_Cmd  0x080039c0       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
-                0x080039c0                TIM_Cmd
+                0x080038ec       0xf0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
+                0x080038ec                TIM_TimeBaseInit
+ .text.TIM_Cmd  0x080039dc       0x40 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
+                0x080039dc                TIM_Cmd
  .text.TIM_ITConfig
-                0x08003a00       0x54 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
-                0x08003a00                TIM_ITConfig
+                0x08003a1c       0x54 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
+                0x08003a1c                TIM_ITConfig
  .text.TIM_GetITStatus
-                0x08003a54       0x80 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
-                0x08003a54                TIM_GetITStatus
+                0x08003a70       0x80 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
+                0x08003a70                TIM_GetITStatus
  .text.TIM_ClearITPendingBit
-                0x08003ad4       0x24 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
-                0x08003ad4                TIM_ClearITPendingBit
+                0x08003af0       0x24 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
+                0x08003af0                TIM_ClearITPendingBit
  .text.USART_Init
-                0x08003af8      0x180 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003af8                USART_Init
+                0x08003b14      0x180 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003b14                USART_Init
  .text.USART_Cmd
-                0x08003c78       0x3c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003c78                USART_Cmd
+                0x08003c94       0x3c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003c94                USART_Cmd
  .text.USART_SendData
-                0x08003cb4       0x24 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003cb4                USART_SendData
+                0x08003cd0       0x24 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003cd0                USART_SendData
  .text.USART_ReceiveData
-                0x08003cd8       0x1c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003cd8                USART_ReceiveData
+                0x08003cf4       0x1c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003cf4                USART_ReceiveData
  .text.USART_ITConfig
-                0x08003cf4       0x88 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003cf4                USART_ITConfig
+                0x08003d10       0x88 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003d10                USART_ITConfig
  .text.USART_GetFlagStatus
-                0x08003d7c       0x3c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003d7c                USART_GetFlagStatus
+                0x08003d98       0x3c /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003d98                USART_GetFlagStatus
  .text.USART_GetITStatus
-                0x08003db8       0xb0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
-                0x08003db8                USART_GetITStatus
- .text.atoi     0x08003e68        0xc /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-atoi.o)
-                0x08003e68                atoi
+                0x08003dd4       0xb0 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+                0x08003dd4                USART_GetITStatus
+ .text.atoi     0x08003e84        0xc /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-atoi.o)
+                0x08003e84                atoi
  .text.__libc_init_array
-                0x08003e74       0x48 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-init.o)
-                0x08003e74                __libc_init_array
- .text.__itoa   0x08003ebc       0x30 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-itoa.o)
-                0x08003ebc                __itoa
- .text.itoa     0x08003eec        0x8 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-itoa.o)
-                0x08003eec                itoa
- .text.memcpy   0x08003ef4       0x7c /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-memcpy-stub.o)
-                0x08003ef4                memcpy
- .text.memset   0x08003f70       0x8c /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-memset.o)
-                0x08003f70                memset
- .text.strcat   0x08003ffc       0x50 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strcat.o)
-                0x08003ffc                strcat
- .text.strcpy   0x0800404c       0x10 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strcpy.o)
-                0x0800404c                strcpy
- .text.strlen   0x0800405c       0x68 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strlen-stub.o)
-                0x0800405c                strlen
- .text.strncmp  0x080040c4       0x98 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strncmp.o)
-                0x080040c4                strncmp
- .text.strtok   0x0800415c       0x14 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtok.o)
-                0x0800415c                strtok
+                0x08003e90       0x48 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-init.o)
+                0x08003e90                __libc_init_array
+ .text.__itoa   0x08003ed8       0x30 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-itoa.o)
+                0x08003ed8                __itoa
+ .text.itoa     0x08003f08        0x8 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-itoa.o)
+                0x08003f08                itoa
+ .text.memcpy   0x08003f10       0x7c /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-memcpy-stub.o)
+                0x08003f10                memcpy
+ .text.memset   0x08003f8c       0x8c /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-memset.o)
+                0x08003f8c                memset
+ .text.strcat   0x08004018       0x50 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strcat.o)
+                0x08004018                strcat
+ .text.strcpy   0x08004068       0x10 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strcpy.o)
+                0x08004068                strcpy
+ .text.strlen   0x08004078       0x68 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strlen-stub.o)
+                0x08004078                strlen
+ .text.strncmp  0x080040e0       0x98 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strncmp.o)
+                0x080040e0                strncmp
+ .text.strtok   0x08004178       0x14 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtok.o)
+                0x08004178                strtok
  .text.__strtok_r
-                0x08004170       0x64 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtok_r.o)
-                0x08004170                __strtok_r
+                0x0800418c       0x64 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtok_r.o)
+                0x0800418c                __strtok_r
  .text._strtol_r
-                0x080041d4      0x178 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtol.o)
-                0x080041d4                _strtol_r
- .text.strtol   0x0800434c       0x18 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtol.o)
-                0x0800434c                strtol
- .text.__utoa   0x08004364       0x8c /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-utoa.o)
-                0x08004364                __utoa
+                0x080041f0      0x178 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtol.o)
+                0x080041f0                _strtol_r
+ .text.strtol   0x08004368       0x18 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-strtol.o)
+                0x08004368                strtol
+ .text.__utoa   0x08004380       0x8c /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-utoa.o)
+                0x08004380                __utoa
  .text.startup.register_fini
-                0x080043f0       0x18 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-__call_atexit.o)
- .text.atexit   0x08004408       0x10 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-atexit.o)
-                0x08004408                atexit
+                0x0800440c       0x18 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-__call_atexit.o)
+ .text.atexit   0x08004424       0x10 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-atexit.o)
+                0x08004424                atexit
  .text.__libc_fini_array
-                0x08004418       0x34 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-fini.o)
-                0x08004418                __libc_fini_array
+                0x08004434       0x34 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-fini.o)
+                0x08004434                __libc_fini_array
  .text.__register_exitproc
-                0x0800444c       0xd4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-__atexit.o)
-                0x0800444c                __register_exitproc
+                0x08004468       0xd4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-__atexit.o)
+                0x08004468                __register_exitproc
  *(.rodata)
- .rodata        0x08004520      0x8d4 src/main.o
+ .rodata        0x0800453c      0x908 src/main.o
  *(.rodata*)
  .rodata.str1.4
-                0x08004df4        0x2 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-impure.o)
- *fill*         0x08004df6        0x2 
+                0x08004e44        0x2 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-impure.o)
+ *fill*         0x08004e46        0x2 
  .rodata._global_impure_ptr
-                0x08004df8        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-impure.o)
-                0x08004df8                _global_impure_ptr
+                0x08004e48        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-impure.o)
+                0x08004e48                _global_impure_ptr
  .rodata.str1.4
-                0x08004dfc       0x28 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-utoa.o)
+                0x08004e4c       0x28 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-utoa.o)
                                  0x25 (size before relaxing)
  .rodata._ctype_
-                0x08004e24      0x101 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-ctype_.o)
-                0x08004e24                _ctype_
+                0x08004e74      0x101 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-ctype_.o)
+                0x08004e74                _ctype_
  *(.glue_7)
- .glue_7        0x08004f25        0x0 linker stubs
+ .glue_7        0x08004f75        0x0 linker stubs
  *(.glue_7t)
- .glue_7t       0x08004f25        0x0 linker stubs
+ .glue_7t       0x08004f75        0x0 linker stubs
  *(.eh_frame)
- *fill*         0x08004f25        0x3 
- .eh_frame      0x08004f28        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
+ *fill*         0x08004f75        0x3 
+ .eh_frame      0x08004f78        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
  *(.init)
- .init          0x08004f28        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crti.o
-                0x08004f28                _init
- .init          0x08004f2c        0x8 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtn.o
+ .init          0x08004f78        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crti.o
+                0x08004f78                _init
+ .init          0x08004f7c        0x8 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtn.o
  *(.fini)
- .fini          0x08004f34        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crti.o
-                0x08004f34                _fini
- .fini          0x08004f38        0x8 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtn.o
-                0x08004f40                . = ALIGN (0x4)
-                0x08004f40                _etext = .
+ .fini          0x08004f84        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crti.o
+                0x08004f84                _fini
+ .fini          0x08004f88        0x8 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtn.o
+                0x08004f90                . = ALIGN (0x4)
+                0x08004f90                _etext = .
 
-.vfp11_veneer   0x08004f40        0x0
- .vfp11_veneer  0x08004f40        0x0 linker stubs
+.vfp11_veneer   0x08004f90        0x0
+ .vfp11_veneer  0x08004f90        0x0 linker stubs
 
-.v4_bx          0x08004f40        0x0
- .v4_bx         0x08004f40        0x0 linker stubs
+.v4_bx          0x08004f90        0x0
+ .v4_bx         0x08004f90        0x0 linker stubs
 
-.iplt           0x08004f40        0x0
- .iplt          0x08004f40        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
+.iplt           0x08004f90        0x0
+ .iplt          0x08004f90        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
 
-.rel.dyn        0x08004f40        0x0
- .rel.iplt      0x08004f40        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
+.rel.dyn        0x08004f90        0x0
+ .rel.iplt      0x08004f90        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
 
 .ARM.extab
  *(.ARM.extab* .gnu.linkonce.armextab.*)
 
-.ARM            0x08004f40        0x0
-                0x08004f40                __exidx_start = .
+.ARM            0x08004f90        0x0
+                0x08004f90                __exidx_start = .
  *(.ARM.exidx*)
-                0x08004f40                __exidx_end = .
+                0x08004f90                __exidx_end = .
 
-.preinit_array  0x08004f40        0x0
-                0x08004f40                PROVIDE (__preinit_array_start, .)
+.preinit_array  0x08004f90        0x0
+                0x08004f90                PROVIDE (__preinit_array_start, .)
  *(.preinit_array*)
-                0x08004f40                PROVIDE (__preinit_array_end, .)
+                0x08004f90                PROVIDE (__preinit_array_end, .)
 
-.init_array     0x08004f40        0x8
-                0x08004f40                PROVIDE (__init_array_start, .)
+.init_array     0x08004f90        0x8
+                0x08004f90                PROVIDE (__init_array_start, .)
  *(SORT(.init_array.*))
  .init_array.00000
-                0x08004f40        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-__call_atexit.o)
+                0x08004f90        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/../../../../arm-none-eabi/lib/armv6-m/libc.a(lib_a-__call_atexit.o)
  *(.init_array*)
- .init_array    0x08004f44        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
-                0x08004f48                PROVIDE (__init_array_end, .)
+ .init_array    0x08004f94        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
+                0x08004f98                PROVIDE (__init_array_end, .)
 
-.fini_array     0x08004f48        0x4
-                0x08004f48                PROVIDE (__fini_array_start, .)
+.fini_array     0x08004f98        0x4
+                0x08004f98                PROVIDE (__fini_array_start, .)
  *(SORT(.fini_array.*))
  *(.fini_array*)
- .fini_array    0x08004f48        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
-                0x08004f4c                PROVIDE (__fini_array_end, .)
-                0x08004f4c                _sidata = LOADADDR (.data)
+ .fini_array    0x08004f98        0x4 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
+                0x08004f9c                PROVIDE (__fini_array_end, .)
+                0x08004f9c                _sidata = LOADADDR (.data)
 
-.data           0x20000000      0x540 load address 0x08004f4c
+.data           0x20000000      0x540 load address 0x08004f9c
                 0x20000000                . = ALIGN (0x4)
                 0x20000000                _sdata = .
  *(.data)
@@ -3881,14 +3881,14 @@ LOAD /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux6
                 0x20000540                . = ALIGN (0x4)
                 0x20000540                _edata = .
 
-.jcr            0x20000540        0x0 load address 0x0800548c
+.jcr            0x20000540        0x0 load address 0x080054dc
  .jcr           0x20000540        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
 
-.igot.plt       0x20000540        0x0 load address 0x0800548c
+.igot.plt       0x20000540        0x0 load address 0x080054dc
  .igot.plt      0x20000540        0x0 /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux64_1.11.0.201610101240/tools/gcc-arm-none-eabi-5_4-2016q2/bin/../lib/gcc/arm-none-eabi/5.4.1/armv6-m/crtbegin.o
                 0x20000540                . = ALIGN (0x4)
 
-.bss            0x20000540      0x134 load address 0x0800548c
+.bss            0x20000540      0x134 load address 0x080054dc
                 0x20000540                _sbss = .
                 0x20000540                __bss_start__ = _sbss
  *(.bss)
@@ -3913,7 +3913,7 @@ LOAD /home/niks/SystemWorkbench/plugins/fr.ac6.mcu.externaltools.arm-none.linux6
                 0x20000674                __bss_end__ = _ebss
 
 ._user_heap_stack
-                0x20000674       0x84 load address 0x0800548c
+                0x20000674       0x84 load address 0x080054dc
                 0x20000678                . = ALIGN (0x8)
  *fill*         0x20000674        0x4 
                 0x20000678                PROVIDE (end, .)
@@ -4149,7 +4149,7 @@ OUTPUT(serialComplete.elf elf32-littlearm)
  .debug_macro   0x00003292      0x194 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
  .debug_macro   0x00003426      0x347 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
 
-.debug_line     0x00000000     0x8973
+.debug_line     0x00000000     0x8975
  .debug_line    0x00000000      0x908 inc/IndicationGPIOs.o
  .debug_line    0x00000908      0x768 inc/SPI1.o
  .debug_line    0x00001070      0x71d inc/SysTickDelay.o
@@ -4157,17 +4157,17 @@ OUTPUT(serialComplete.elf elf32-littlearm)
  .debug_line    0x00001dab      0x6af inc/USART1.o
  .debug_line    0x0000245a      0x824 inc/XBee.o
  .debug_line    0x00002c7e      0x503 inc/myStringFunctions.o
- .debug_line    0x00003181      0xad0 src/main.o
- .debug_line    0x00003c51      0x660 src/system_stm32f0xx.o
- .debug_line    0x000042b1       0x81 startup/startup_stm32f0xx.o
- .debug_line    0x00004332      0x6c2 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
- .debug_line    0x000049f4      0x750 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
- .debug_line    0x00005144      0x646 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_misc.o)
- .debug_line    0x0000578a      0x97e /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
- .debug_line    0x00006108      0x8cf /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
- .debug_line    0x000069d7      0x6ac /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_syscfg.o)
- .debug_line    0x00007083      0xeb7 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
- .debug_line    0x00007f3a      0xa39 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
+ .debug_line    0x00003181      0xad2 src/main.o
+ .debug_line    0x00003c53      0x660 src/system_stm32f0xx.o
+ .debug_line    0x000042b3       0x81 startup/startup_stm32f0xx.o
+ .debug_line    0x00004334      0x6c2 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_exti.o)
+ .debug_line    0x000049f6      0x750 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_gpio.o)
+ .debug_line    0x00005146      0x646 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_misc.o)
+ .debug_line    0x0000578c      0x97e /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_rcc.o)
+ .debug_line    0x0000610a      0x8cf /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_spi.o)
+ .debug_line    0x000069d9      0x6ac /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_syscfg.o)
+ .debug_line    0x00007085      0xeb7 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_tim.o)
+ .debug_line    0x00007f3c      0xa39 /home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug/libstm32f0discovery_stdperiph_lib.a(stm32f0xx_usart.o)
 
 .debug_str      0x00000000    0x32b7d
  .debug_str     0x00000000    0x2b4f3 inc/IndicationGPIOs.o

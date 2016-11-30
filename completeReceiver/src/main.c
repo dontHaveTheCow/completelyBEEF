@@ -727,14 +727,17 @@ int main(void){
 					 * Solid light means error
 					 */
 
-					if((node[frameID-1].errorByte & 0x01)+((node[frameID-1].errorByte >> 1)&0x01)+(node[frameID-1].errorByte >> 2) > 0){
+/*					if((node[frameID-1].errorByte & 0x01)+((node[frameID-1].errorByte >> 1)&0x01)+(node[frameID-1].errorByte >> 2) > 0){
 
 						GPIOB->ODR |= (1 << (5+tmpNode));
 					}
 					else{
 						//indicate that one of the five nodes received packet was good
 						GPIOB->ODR ^= (1 << (5+tmpNode));
-					}
+					}*/
+
+					GPIOB->ODR ^= (1 << (5+tmpNode));
+
 					if(transferNode[tmpNode] == true){
 						//Re-send data to serial node
 						if(node[tmpNode].state == ACC_STATE_CASE){
