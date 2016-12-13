@@ -822,7 +822,7 @@ void USART1_IRQHandler(void){
 
 		Usart1_Send(serialBuffer[packetLenght] = USART_ReceiveData(USART1));
 		//serialBuffer[packetLenght] = USART_ReceiveData(USART1);
-		if(serialBuffer[packetLenght++] == '\n'){
+		if(serialBuffer[packetLenght++] == '\r'){
 			serialBuffer[packetLenght-1] = '\0';
 			TOGGLE_REDLED_SERIAL();
 			serialUpdated = true;

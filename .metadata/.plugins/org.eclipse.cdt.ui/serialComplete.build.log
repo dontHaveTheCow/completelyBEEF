@@ -1,6 +1,17 @@
-16:04:18 **** Incremental Build of configuration Debug for project serialComplete ****
+17:27:43 **** Build of configuration Debug for project serialComplete ****
 make all 
-make: Nothing to be done for 'all'.
+Building target: serialComplete.elf
+Invoking: MCU GCC Linker
+arm-none-eabi-gcc -mcpu=cortex-m0 -mthumb -mfloat-abi=soft -L"/home/niks/stm32workspace/stm32f0discovery_stdperiph_lib/Debug" -T"/home/niks/stm32workspace/serialComplete/LinkerScript.ld" -Wl,-Map=output.map -Wl,--gc-sections -lm -o "serialComplete.elf" @"objects.list"  -lstm32f0discovery_stdperiph_lib
+Finished building target: serialComplete.elf
+ 
+make --no-print-directory post-build
+Generating binary and Printing size information:
+arm-none-eabi-objcopy -O binary "serialComplete.elf" "serialComplete.bin"
+arm-none-eabi-size "serialComplete.elf"
+   text	   data	    bss	    dec	    hex	filename
+  20368	   1356	    440	  22164	   5694	serialComplete.elf
+ 
 
-16:04:18 Build Finished (took 84ms)
+17:27:43 Build Finished (took 180ms)
 

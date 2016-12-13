@@ -801,6 +801,7 @@ int main(void){
 			 * Parse RECEIVE command packet
 			 */
 			case RECIEVE_PACKET:
+
 				i = 1;	//Remember that "Frame type" byte was the first one
 				uint32_t receivedAddressHigh = 0;
 				uint32_t receivedAddressLow = 0;
@@ -915,6 +916,7 @@ int main(void){
 									}
 							}
 							//after receiving gps measurement, ask module for last packets RSSI
+
 							askModuleParams('D','B',tmpNode+1);
 							break;
 

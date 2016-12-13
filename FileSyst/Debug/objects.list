@@ -1,8 +1,0 @@
-"inc/IndicationGPIOs.o"
-"inc/SPI1.o"
-"inc/SysTickDelay.o"
-"inc/sdCard.o"
-"src/main.o"
-"src/syscalls.o"
-"src/system_stm32f0xx.o"
-"startup/startup_stm32f0xx.o"
