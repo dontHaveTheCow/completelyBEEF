@@ -17,10 +17,6 @@
 #include "IndicationGPIOs.h"
 
 /*
- * XBEE packet defines
- */
-
-/*
  * XBEE defines
  */
 #define ERROR_TIMER_COUNT 30
@@ -41,7 +37,7 @@
  */
 #define TOGGLE_REDLED_SERIAL() GPIOB->ODR ^= GPIO_Pin_5
 #define TOGGLE_REDLED_XBEE() GPIOB->ODR ^= GPIO_Pin_6
-#define SET_REDLED_SERIAL() GPIOB->ODR |= GPIO_Pin_5;
+#define SET_REDLED_SERIAL() GPIOB->ODR |= GPIO_Pin_5
 /*
  * Serial globals
  */
@@ -88,6 +84,7 @@ int main(void)
 	char s_delimiter[2] = "#";
 	char key[32] = "";
 	char value[64];
+	char str_helper[32] = "";
 	char timerString[10];
 	//Local variables - XBEE
 	uint32_t xbeeAddressHigh;
@@ -154,16 +151,26 @@ int main(void)
 				SEND_SERIAL_MSG("\r\n");
 			}
 			else if(strcmp(key,"GET_ADDRESS_HIGH") == 0){
-
-				askModuleParams('S','H',0x01);
+				askXbeeParam("SH",AT_FRAME_ID_REQUEST);
 			}
 			else if(strcmp(key,"GET_ADDRESS_LOW") == 0){
-
-				askModuleParams('S','L',0x01);
+				askXbeeParam("SL",AT_FRAME_ID_REQUEST);
+			}
+			else if(strcmp(key,"GET_POWER_SERIAL") == 0){
+				askXbeeParam("PL",AT_FRAME_ID_REQUEST);
+			}
+			else if(strcmp(key,"SET_POWER_SERIAL") == 0){
+				xbeeApplyParamter("PL",atoi(value),AT_FRAME_ID_APPLY);
+			}
+			//Find Neighbors
+			else if(strcmp(key,"FIND_NEIGHBORS") == 0){
+				askXbeeParam("FN",AT_FRAME_ID_REQUEST);
 			}
 			else if(strcmp(key,"SYNC_TIME") == 0){
 
-				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,"C 0");
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x01;
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"SET_EVENT") == 0){
 
@@ -180,7 +187,7 @@ int main(void)
 				 * If this CMD doesnt seem to work, this might be because 0x00 equals to null
 				 */
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x00;
+				xbeeTransmitString[2] = 0x02;
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"SET_THRACC") == 0){
@@ -222,14 +229,14 @@ int main(void)
 				xbeeTransmitString[2] = 0x08;
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
-			else if(strcmp(key,"GET_REL_NODE") == 0){
+			else if(strcmp(key,"GET_ABSREL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C   ");
 				xbeeTransmitString[2] = 0x09;
 				strcpy(&xbeeTransmitString[4],value);
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
-			else if(strcmp(key,"GET_REL_ALL") == 0){
+			else if(strcmp(key,"GET_ABSREL_ALL") == 0){
 
 				//Parameter "7" tells to get data from every node
 				strcpy(&xbeeTransmitString[0],"C   ");
@@ -237,17 +244,47 @@ int main(void)
 				strcpy(&xbeeTransmitString[4],"7");
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
+			else if(strcmp(key,"STOP_ABSREL_NODE") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x0A;
+				strcpy(&xbeeTransmitString[4],value);
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			}
+			else if(strcmp(key,"STOP_ABSREL_ALL") == 0){
+
+				//Parameter "7" tells to get data from every node
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x0A;
+				strcpy(&xbeeTransmitString[4],"7");
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			}
+			else if(strcmp(key,"GET_REL_NODE") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x0B;
+				strcpy(&xbeeTransmitString[4],value);
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			}
+			else if(strcmp(key,"GET_REL_ALL") == 0){
+
+				//Parameter "7" tells to get data from every node
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x0B;
+				strcpy(&xbeeTransmitString[4],"7");
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			}
 			else if(strcmp(key,"GET_ABS_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0A;
+				xbeeTransmitString[2] = 0x0C;
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"GET_ABS_ALL") == 0){
 
 				//Parameter "7" tells to get data from every node
 				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0A;
+				xbeeTransmitString[2] = 0x0C;
 				strcpy(&xbeeTransmitString[4],"7");
 				transmitRequest(node[0].addressHigh,node[0].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -258,14 +295,14 @@ int main(void)
 			else if(strcmp(key,"STOP_ABS_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0B;
+				xbeeTransmitString[2] = 0x0D;
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"STOP_ABS_ALL") == 0){
 
 				//Parameter "7" tells to get data from every node
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0B;
+				xbeeTransmitString[2] = 0x0D;
 				transmitRequest(node[0].addressHigh,node[0].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
 				transmitRequest(node[1].addressHigh,node[1].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
@@ -276,29 +313,35 @@ int main(void)
 			else if(strcmp(key,"STOP_REL_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0C;
+				xbeeTransmitString[2] = 0x0E;
 				strcpy(&xbeeTransmitString[4],value);
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"STOP_REL_ALL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0C;
+				xbeeTransmitString[2] = 0x0E;
 				strcpy(&xbeeTransmitString[4],"7");
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"INIT_NODE") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"7");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '7';
+				xbeeTransmitString[5] = '\0';
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"INIT_ALL") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"7");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '7';
+				xbeeTransmitString[5] = '\0';
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -311,17 +354,23 @@ int main(void)
 			}
 			else if(strcmp(key,"INIT_ACC_NODE") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"1");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '1';
+				xbeeTransmitString[5] = '\0';
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
 			}
 			else if(strcmp(key,"INIT_ACC_ALL") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"1");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '1';
+				xbeeTransmitString[5] = '\0';
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -334,16 +383,22 @@ int main(void)
 			}
 			else if(strcmp(key,"INIT_GPS_NODE") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"2");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '2';
+				xbeeTransmitString[5] = '\0';
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"INIT_GPS_ALL") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"2");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '2';
+				xbeeTransmitString[5] = '\0';
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -355,17 +410,79 @@ int main(void)
 			}
 			else if(strcmp(key,"INIT_SD_NODE") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"4");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '4';
+				xbeeTransmitString[5] = '\0';
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
 			}
 			else if(strcmp(key,"INIT_SD_ALL") == 0){
 
-				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x0D;
-				strcpy(&xbeeTransmitString[4],"4");
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '4';
+				xbeeTransmitString[5] = '\0';
+
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				delayMs(2000);
+				transmitRequest(node[0].addressHigh,node[0].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				delayMs(2000);
+				transmitRequest(node[1].addressHigh,node[1].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				delayMs(2000);
+				transmitRequest(node[2].addressHigh,node[2].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			}
+			else if(strcmp(key,"INIT_ACCSD_NODE") == 0){
+
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '5';
+				xbeeTransmitString[5] = '\0';
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+
+			}
+			else if(strcmp(key,"INIT_ACCSD_ALL") == 0){
+
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '5';
+				xbeeTransmitString[5] = '\0';
+
+				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				delayMs(2000);
+				transmitRequest(node[0].addressHigh,node[0].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				delayMs(2000);
+				transmitRequest(node[1].addressHigh,node[1].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				delayMs(2000);
+				transmitRequest(node[2].addressHigh,node[2].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			}
+			else if(strcmp(key,"INIT_GPSSD_NODE") == 0){
+
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '6';
+				xbeeTransmitString[5] = '\0';
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+
+			}
+			else if(strcmp(key,"INIT_GPSSD_ALL") == 0){
+
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '6';
+				xbeeTransmitString[5] = '\0';
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -378,7 +495,7 @@ int main(void)
 			else if(strcmp(key,"START_ALL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0E;
+				xbeeTransmitString[2] = 0x10;
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -391,13 +508,13 @@ int main(void)
 			else if(strcmp(key,"START_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0E;
+				xbeeTransmitString[2] = 0x10;
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"IDLE_ALL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[2] = 0x11;
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -410,13 +527,13 @@ int main(void)
 			else if(strcmp(key,"IDLE_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[2] = 0x11;
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"STOP_ALL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x10;
+				xbeeTransmitString[2] = 0x12;
 
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
@@ -429,32 +546,32 @@ int main(void)
 			else if(strcmp(key,"STOP_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x10;
+				xbeeTransmitString[2] = 0x12;
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"SET_THRTIM") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C   ");
-				xbeeTransmitString[2] = 0x11;
+				xbeeTransmitString[2] = 0x13;
 				strcpy(&xbeeTransmitString[4],value);
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"GET_THRTIM") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x12;
+				xbeeTransmitString[2] = 0x14;
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"GET_BATTERY") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x13;
+				xbeeTransmitString[2] = 0x15;
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
 			else if(strcmp(key,"GET_GPSCOORD_ALL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x14;
+				xbeeTransmitString[2] = 0x16;
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				delayMs(2000);
 				transmitRequest(node[0].addressHigh,node[0].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
@@ -467,8 +584,24 @@ int main(void)
 			else if(strcmp(key,"GET_GPSCOORD_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x14;
+				xbeeTransmitString[2] = 0x16;
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
+			else if(strcmp(key,"GET_POWER") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x17;
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
+			else if(strcmp(key,"SET_POWER") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x18;
+				str_splitter(value,key,str_helper,s_delimiter);
+				strcpy(&xbeeTransmitString[4],str_helper);
+				transmitRequest(node[atoi(key)].addressHigh,node[atoi(key)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
 			}
 			else if(strcmp(key,"PRINT_CMD") == 0){
@@ -477,6 +610,8 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#SYNC_TIME\r\n");
 				SEND_SERIAL_MSG("MSG#GET_ADDRESS_HIGH\r\n");
 				SEND_SERIAL_MSG("MSG#GET_ADDRESS_LOW\r\n");
+				SEND_SERIAL_MSG("MSG#GET_POWER_SERIAL\r\n");
+				SEND_SERIAL_MSG("MSG#SET_POWER_SERIAL\r\n");
 				SEND_SERIAL_MSG("MSG#SET_EVENT#\r\n");
 				SEND_SERIAL_MSG("MSG#SET_EVENT_COORD\r\n");
 				SEND_SERIAL_MSG("MSG#SET_THRACC#\r\n");
@@ -488,7 +623,9 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#GET_THRRSSI#\r\n");
 				SEND_SERIAL_MSG("MSG#GET_THRTIM#\r\n");
 				SEND_SERIAL_MSG("MSG#GET_BATTERY#\r\n");
-				SEND_SERIAL_MSG("MSG#GET_REL_NODE#\r\n");
+				SEND_SERIAL_MSG("MSG#GET_ABSREL#\r\n");
+				SEND_SERIAL_MSG("MSG#GET_ABSREL_ALL#\r\n");
+				SEND_SERIAL_MSG("MSG#STOP_ABSREL_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#GET_REL_ALL#\r\n");
 				SEND_SERIAL_MSG("MSG#GET_ABS_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#GET_ABS_ALL#\r\n");
@@ -505,6 +642,10 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#INIT_GPS_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#INIT_SD_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#INIT_GPS_ALL\r\n");
+				SEND_SERIAL_MSG("MSG#INIT_ACCSD_NODE\r\n");
+				SEND_SERIAL_MSG("MSG#INIT_ACCSD_NODE\r\n");
+				SEND_SERIAL_MSG("MSG#INIT_GPSSD_NODE\r\n");
+				SEND_SERIAL_MSG("MSG#INIT_GPSSD_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#START_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#START_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#IDLE_ALL\r\n");
@@ -512,6 +653,8 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#STOP_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#GET_GPSCOORD_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#GET_GPSCOORD_NODE#\r\n");
+				SEND_SERIAL_MSG("MSG#GET_POWER\r\n");
+				SEND_SERIAL_MSG("MSG#SET_POWER\r\n");
 			}
 			else{
 				// VERYWRONG DATA
@@ -536,7 +679,7 @@ int main(void)
 				SEND_SERIAL_MSG(xbeeAddressHighString);
 				SEND_SERIAL_MSG("\r\n");
 			}else{
-				SEND_SERIAL_MSG("DEBUG#SH_AT_COMMAND_REQUEST_ERROR\n");
+				SEND_SERIAL_MSG("DEBUG#SH_AT_COMMAND_REQUEST_ERROR\r\n");
 			}
 		}else if(strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "SL", 2) == 0) {
 
@@ -551,11 +694,46 @@ int main(void)
 				SEND_SERIAL_MSG("\r\n");
 			}
 			else{
-				SEND_SERIAL_MSG("DEBUG#SL_AT_COMMAND_REQUEST_ERROR\n");
+				SEND_SERIAL_MSG("DEBUG#SL_AT_COMMAND_REQUEST_ERROR\r\n");
+			}
+		}else if(strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "FN", 2) == 0) {
+
+			if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+
+				//FIND_NEIGHBORS
+				uint8_t counter = xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA];
+
+				while(counter++ < length){
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[counter]);
+				}
+
+				SEND_SERIAL_MSG("\r\n");
+			}
+			else{
+				SEND_SERIAL_MSG("DEBUG#FN_AT_COMMAND_REQUEST_ERROR\r\n");
+			}
+		}else if (strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "PL", 2) == 0) {
+			if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
+				if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+					SEND_SERIAL_MSG("DEBUG#SERIAL POWER LEVEL:");
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA]+ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_MSG("\r\n");
+
+				}else{
+					SEND_SERIAL_MSG("PL_AT_COMMAND_REQUEST_ERROR\r\n");
+				}
+			}else if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_APPLY){
+				if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+					SEND_SERIAL_MSG("DEBUG#PL_AT_COMMAND_APPLIED\r\n");
+					askXbeeParam("PL",AT_FRAME_ID_REQUEST);
+
+				}else{
+					SEND_SERIAL_MSG("DEBUG#PL_AT_COMMAND_APPLY_ERROR\r\n");
+				}
 			}
 		}
 		else {
-			SEND_SERIAL_MSG("MSG#UNEXPECTED_AT_COMMAND_RESPONSE XBEE PACKET\n");
+			SEND_SERIAL_MSG("DEBUG#UNEXPECTED_AT_COMMAND_RESPONSE XBEE PACKET\r\n");
 		}
 		break;
 		case XBEE_RECEIVE_PACKET:
@@ -572,28 +750,105 @@ int main(void)
 				 */
 				switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
 
-				case ('0'):
-					break;
-				case ('1'):
+				case (0x80):
 					globalCounter = atoi(&xbeeReceiveBuffer[16]) + TIMER_SYNC_DELAY;
 					SEND_SERIAL_MSG("MSG#TIMER#SYNCHRONIZED...\r\n");
+					SEND_SERIAL_MSG("MSG#CURRENT_TIME#");
+					SEND_SERIAL_BYTE((globalCounter%1000000)/100000 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE((globalCounter%100000)/10000 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE((globalCounter%10000)/1000 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE((globalCounter%1000)/100 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE((globalCounter%100)/10 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE(globalCounter%10 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_MSG("\r\n");
 					break;
-				case ('9'):
+				case (0x81):
+					//Command positive response
+					receivedAddressHigh = 0x00;
+					receivedAddressLow = 0x00;
+
+					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
+
+						if(iterator<5){
+							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
+						}
+						else{
+							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
+						}
+					}
+
+					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
+						if(receivedAddressLow == node[niterator].addressLow )
+							tmpNode = niterator;
+					}
+					SEND_SERIAL_MSG("MSG#");
+					SEND_SERIAL_MSG("CMD_ACCEPTED_NODE#");
+					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_MSG("\r\n");
+					break;
+				case (0x82):
 					SEND_SERIAL_MSG("MSG#RSSI_THRESHOLD#");
 					SEND_SERIAL_MSG(&xbeeReceiveBuffer[16]);
 					SEND_SERIAL_MSG("\r\n");
 					break;
-				case ('A'):
+				case (0x83):
 					SEND_SERIAL_MSG("MSG#ACC_THRESHOLD#");
 					SEND_SERIAL_MSG(&xbeeReceiveBuffer[16]);
 					SEND_SERIAL_MSG("\r\n");
 					break;
-				case ('B'):
+				case (0x84):
 					SEND_SERIAL_MSG("MSG#GPS_THRESHOLD#");
 					SEND_SERIAL_MSG(&xbeeReceiveBuffer[16]);
 					SEND_SERIAL_MSG("\r\n");
 					break;
-				case ('E'):
+				case (0x85):
+					SEND_SERIAL_MSG("MSG#TIM_THRESHOLD#");
+					SEND_SERIAL_MSG(&xbeeReceiveBuffer[16]);
+					SEND_SERIAL_MSG("\r\n");
+					break;
+				case (0x86):
+					SEND_SERIAL_MSG("MSG#BATTERY#");
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[16]);
+					SEND_SERIAL_BYTE('.');
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[17]);
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[18]);
+					SEND_SERIAL_MSG("\r\n");
+					break;
+				case (0x87):
+					//Readiness response
+					//"C N#<state><\n>
+					receivedAddressHigh = 0x00;
+					receivedAddressLow = 0x00;
+
+					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
+
+						if(iterator<5){
+							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
+						}
+						else{
+							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
+						}
+					}
+
+					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
+						if(receivedAddressLow == node[niterator].addressLow )
+							tmpNode = niterator;
+					}
+					SEND_SERIAL_MSG("MSG#NODE#");
+					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE('#');
+					if((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2])&0x01){
+						SEND_SERIAL_MSG("ACC#");
+					}
+					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 1)&0x01){
+						SEND_SERIAL_MSG("GPS#");
+					}
+					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 2)&0x01){
+						SEND_SERIAL_MSG("SD#");
+					}
+					SEND_SERIAL_MSG("READY\r\n");
+					break;
+				case (0x88):
 					//Transfered accelerometer and RSSI measurement
 					//"C E#3#30#7#1224"
 
@@ -647,7 +902,7 @@ int main(void)
 					SEND_SERIAL_MSG("\r\n");
 					break;
 
-				case ('F'):
+				case (0x89):
 					//Transfered velocity and RSSI measurement
 					//"C F#3#30#7#5.8"
 
@@ -699,9 +954,14 @@ int main(void)
 					 */
 
 					break;
-				case ('N'):
-					//Transfered velocity and RSSI measurement
-					//"C N#<state><\n>
+				case (0x8A):
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
+					SEND_SERIAL_BYTE('#');
+					SEND_SERIAL_MSG("COORD_NODE_LAT_LONG#");
+					SEND_SERIAL_MSG(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4]);
+					SEND_SERIAL_MSG("\r\n");
+				break;
+				case (0x8B):
 					receivedAddressHigh = 0x00;
 					receivedAddressLow = 0x00;
 
@@ -720,75 +980,21 @@ int main(void)
 							tmpNode = niterator;
 					}
 					SEND_SERIAL_MSG("MSG#NODE#");
+					//id
 					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
 					SEND_SERIAL_BYTE('#');
-					if((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] - ASCII_DIGIT_OFFSET)&0x01){
-						SEND_SERIAL_MSG("ACC#");
-					}
-					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] - 0x30) >> 1)&0x01){
-						SEND_SERIAL_MSG("GPS#");
-					}
-					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] - 0x30) >> 2)&0x01){
-						SEND_SERIAL_MSG("SD#");
-					}
-
-					SEND_SERIAL_MSG("READY\r\n");
-					break;
-				case ('O'):
-					//Transfered velocity and RSSI measurement
-					//"C N#<state><\n>
-					receivedAddressHigh = 0x00;
-					receivedAddressLow = 0x00;
-
-					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
-
-						if(iterator<5){
-							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
-						}
-						else{
-							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
-						}
-					}
-
-					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
-						if(receivedAddressLow == node[niterator].addressLow )
-							tmpNode = niterator;
-					}
-					SEND_SERIAL_MSG("MSG#");
-					SEND_SERIAL_MSG("CMD_ACCEPTED_NODE#");
-					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_MSG("POWER_LEVEL#");
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] + ASCII_DIGIT_OFFSET);
 					SEND_SERIAL_MSG("\r\n");
-					break;
-				case ('T'):
-					SEND_SERIAL_MSG("MSG#TIM_THRESHOLD#");
-					SEND_SERIAL_MSG(&xbeeReceiveBuffer[16]);
-					SEND_SERIAL_MSG("\r\n");
-					break;
-				case ('U'):
-					SEND_SERIAL_MSG("MSG#BATTERY#");
-					SEND_SERIAL_BYTE(xbeeReceiveBuffer[16]);
-					SEND_SERIAL_BYTE('.');
-					SEND_SERIAL_BYTE(xbeeReceiveBuffer[17]);
-					SEND_SERIAL_BYTE(xbeeReceiveBuffer[18]);
-					SEND_SERIAL_MSG("\r\n");
-					break;
-				case ('V'):
-
-				SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
-				SEND_SERIAL_BYTE('#');
-				SEND_SERIAL_MSG("TIM_DNG#");
-				SEND_SERIAL_MSG(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4]);
-				SEND_SERIAL_MSG("\r\n");
-
 				break;
-				case ('a'):
 
-				SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
-				SEND_SERIAL_BYTE('#');
-				SEND_SERIAL_MSG("COORD_NODE_LAT_LONG#");
-				SEND_SERIAL_MSG(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4]);
-				SEND_SERIAL_MSG("\r\n");
 
+				case ('V'):
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
+					SEND_SERIAL_BYTE('#');
+					SEND_SERIAL_MSG("TIM_DNG#");
+					SEND_SERIAL_MSG(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4]);
+					SEND_SERIAL_MSG("\r\n");
 				break;
 				default:
 					SEND_SERIAL_MSG("MSG#UNEXPECTED_XBEE_COMMAND...\r\n");
@@ -873,9 +1079,9 @@ int main(void)
 void USART1_IRQHandler(void){
 	if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET){
 
-		Usart1_Send(serialBuffer[packetLenght] = USART_ReceiveData(USART1));
+		Usart1_Send(serialBuffer[packetLenght++] = USART_ReceiveData(USART1));
 		//serialBuffer[packetLenght] = USART_ReceiveData(USART1);
-		if(serialBuffer[packetLenght++] == '\r'){
+		if(serialBuffer[packetLenght-1] == '\r' || serialBuffer[packetLenght-1] == '\n'){
 			serialBuffer[packetLenght-1] = '\0';
 			TOGGLE_REDLED_SERIAL();
 			serialUpdated = true;

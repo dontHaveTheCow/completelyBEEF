@@ -384,3 +384,59 @@ Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp
 
 !ENTRY org.eclipse.core.resources 2 10035 2016-12-13 18:24:14.391
 !MESSAGE The workspace exited with unsaved changes in the previous session; refreshing workspace to recover changes.
+!SESSION 2016-12-14 10:08:29.827 -----------------------------------------------
+eclipse.buildId=4.5.2.M20160212-1500
+java.version=1.8.0_111
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.cdt.core 1 0 2016-12-14 10:51:36.958
+!MESSAGE Indexed 'stm32f0discovery_stdperiph_lib' (22 sources, 36 headers) in 2.45 sec: 3,621 declarations; 14,600 references; 0 unresolved inclusions; 1 syntax errors; 1 unresolved names (0.0055%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2016-12-14 10:51:37.508
+!MESSAGE Indexed 'advancedCompleteReceiver' (3 sources, 28 headers) in 0.475 sec: 1,897 declarations; 1,072 references; 10 unresolved inclusions; 9 syntax errors; 820 unresolved names (22%)
+!SESSION 2016-12-14 12:47:30.944 -----------------------------------------------
+eclipse.buildId=4.5.2.M20160212-1500
+java.version=1.8.0_111
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.core.resources 2 10035 2016-12-14 12:47:32.108
+!MESSAGE The workspace exited with unsaved changes in the previous session; refreshing workspace to recover changes.
+!SESSION 2016-12-15 09:22:53.787 -----------------------------------------------
+eclipse.buildId=4.5.2.M20160212-1500
+java.version=1.8.0_111
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.cdt.core 1 0 2016-12-15 09:25:49.394
+!MESSAGE Indexed 'stm32f0discovery_stdperiph_lib' (22 sources, 36 headers) in 2.39 sec: 3,621 declarations; 14,600 references; 0 unresolved inclusions; 1 syntax errors; 1 unresolved names (0.0055%)
+
+!ENTRY org.eclipse.cdt.core 1 0 2016-12-15 09:25:50.035
+!MESSAGE Indexed 'advancedCompleteTransmitter' (3 sources, 28 headers) in 0.63 sec: 1,897 declarations; 1,072 references; 10 unresolved inclusions; 9 syntax errors; 820 unresolved names (22%)
+!SESSION 2016-12-15 11:18:42.438 -----------------------------------------------
+eclipse.buildId=4.5.2.M20160212-1500
+java.version=1.8.0_111
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.core.resources 2 10035 2016-12-15 11:18:43.547
+!MESSAGE The workspace exited with unsaved changes in the previous session; refreshing workspace to recover changes.
+!SESSION 2016-12-15 13:59:30.583 -----------------------------------------------
+eclipse.buildId=4.5.2.M20160212-1500
+java.version=1.8.0_111
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Framework arguments:  -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86_64 -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.core.resources 2 10035 2016-12-15 13:59:31.744
+!MESSAGE The workspace exited with unsaved changes in the previous session; refreshing workspace to recover changes.

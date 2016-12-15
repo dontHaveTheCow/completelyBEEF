@@ -32,7 +32,6 @@ int main(void)
 	GPIO_SetBits(GPIOC,GPIO_Pin_9);
 
 	for(;;){
-
 	}
 }
 
