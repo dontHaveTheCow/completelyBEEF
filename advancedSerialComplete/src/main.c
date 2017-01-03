@@ -15,7 +15,9 @@
 #include "Timer.h"
 #include "XBee.h"
 #include "IndicationGPIOs.h"
-
+#include "SPI2.h"
+#include "ADXL362.h"
+#include "accTimer.h"
 /*
  * XBEE defines
  */
@@ -38,6 +40,8 @@
 #define TOGGLE_REDLED_SERIAL() GPIOB->ODR ^= GPIO_Pin_5
 #define TOGGLE_REDLED_XBEE() GPIOB->ODR ^= GPIO_Pin_6
 #define SET_REDLED_SERIAL() GPIOB->ODR |= GPIO_Pin_5
+
+#define ACC_BUFFER_SIZE 70
 /*
  * Serial globals
  */
@@ -56,6 +60,8 @@ bool xbeeReading = false;
  * Module globals
  */
 uint32_t globalCounter = 0;
+int16_t accBuff[ACC_BUFFER_SIZE];
+uint8_t accBuffValue = 0;
 
 int main(void)
 {
@@ -94,6 +100,9 @@ int main(void)
 	char xbeeTransmitString[64];
 	char xbeeReceivedRelative[32];
 	char xbeeReceivedAbsolute[32];
+	uint32_t channelMask = 0x3FFFFFFF; //for all 30 channels enabled
+	uint32_t tmpmask = 0x00;
+	uint8_t tmpcounter = 0;
 
 	uint32_t receivedAddressHigh = 0;
 	uint32_t receivedAddressLow = 0;
@@ -115,6 +124,11 @@ int main(void)
 	Configure_SPI1_interrupt();
 	Initialize_timer();
 	Timer_interrupt_enable();
+	//acelerometer stuff
+	InitialiseSPI2_GPIO();
+	InitialiseSPI2();
+	Initialize_accTimer();
+	accTimer_interrupt_enable();
 
 	//Wait 1 second for XBEE to start UpP...
 	delayMs(1000);
@@ -139,7 +153,34 @@ int main(void)
     		/*
     		 * Process serial
     		 */
-			if(strcmp(key,"GET_TIME") == 0){
+    		if(strcmp(key,"SEND_MESSAGE") == 0){
+				str_splitter(value,key,str_helper,s_delimiter);
+				uint8_t target = atoi(key);
+
+    			if(target < NUMBER_OF_NODES)
+    				transmitRequest(node[target].addressHigh,node[target].addressLow,TRANSOPT_DISACK, 0x00,str_helper);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+
+    		}
+    		else if(strcmp(key,"START_EXPERIMENT") == 0){
+
+    			str_splitter(value,key,str_helper,s_delimiter);
+    			uint8_t experimentPackets = atoi(str_helper);
+    			uint8_t target = atoi(key);
+
+    			if(target < NUMBER_OF_NODES){
+        			for(; experimentPackets > 0; experimentPackets--){
+        				delayMs(100);
+
+        				strcpy(xbeeTransmitString,"EXP");
+        				itoa(experimentPackets,&xbeeTransmitString[3], 10);
+
+        				transmitRequest(node[target].addressHigh,node[target].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+        				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+        			}
+    			}
+    		}
+    		else if(strcmp(key,"GET_TIME") == 0){
 
 				SEND_SERIAL_MSG("MSG#CURRENT_TIME#");
 				SEND_SERIAL_BYTE((globalCounter%1000000)/100000 + ASCII_DIGIT_OFFSET);
@@ -162,7 +203,41 @@ int main(void)
 			else if(strcmp(key,"SET_POWER_SERIAL") == 0){
 				xbeeApplyParamter("PL",atoi(value),AT_FRAME_ID_APPLY);
 			}
-			//Find Neighbors
+			else if(strcmp(key,"GET_CHANNELS_SERIAL") == 0){
+				askXbeeParam("CM",AT_FRAME_ID_REQUEST);
+			}			else if(strcmp(key,"SET_POWER_SERIAL") == 0){
+				xbeeApplyParamter("PL",atoi(value),AT_FRAME_ID_APPLY);
+			}
+			else if(strcmp(key,"GET_CHANNELS_SERIAL") == 0){
+				askXbeeParam("CM",AT_FRAME_ID_REQUEST);
+			}
+			else if(strcmp(key,"SET_CHANNELS_SERIAL") == 0){
+
+				char* ptr_helper = value;
+				uint8_t digitCounter;
+				tmpmask = 0x00;
+
+				while(*ptr_helper != '\0'){
+					//Comma separates passed channel id
+					digitCounter = 0;
+					while(*ptr_helper != ','){
+						if(*ptr_helper == '\0')
+							break;
+						digitCounter++;ptr_helper++;
+					}
+					//jump away from comma
+					if(digitCounter == 1){
+						tmpmask |= 1 << (*(ptr_helper-1) - ASCII_DIGIT_OFFSET);
+					}else{
+						tmpmask |= 1 << (((*(ptr_helper-2) - ASCII_DIGIT_OFFSET)*10)
+									+ (*(ptr_helper-1) - ASCII_DIGIT_OFFSET));
+					}
+					if(*ptr_helper++ == '\0')
+						break;
+				}
+				xbeeApplyDwordParamter("CM",tmpmask,AT_FRAME_ID_APPLY);
+
+			}
 			else if(strcmp(key,"FIND_NEIGHBORS") == 0){
 				askXbeeParam("FN",AT_FRAME_ID_REQUEST);
 			}
@@ -604,14 +679,63 @@ int main(void)
 				transmitRequest(node[atoi(key)].addressHigh,node[atoi(key)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
 			}
+			else if(strcmp(key,"GET_CHANNELS") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x19;
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
+			else if(strcmp(key,"SET_CHANNELS") == 0){
+
+				str_splitter(value,key,str_helper,s_delimiter);
+				//Parse str_helper to output dword
+				//str_helper -> 1,3,4,5,7
+				char* ptr_helper = str_helper;
+				uint8_t digitCounter;
+				tmpmask = 0x00;
+
+				while(*ptr_helper != '\0'){
+					//Comma separates passed channel id
+					digitCounter = 0;
+					while(*ptr_helper != ','){
+						if(*ptr_helper == '\0')
+							break;
+						digitCounter++;ptr_helper++;
+					}
+					//jump away from comma
+					if(digitCounter == 1){
+						tmpmask |= 1 << (*(ptr_helper-1) - ASCII_DIGIT_OFFSET);
+					}else{
+						tmpmask |= 1 << (((*(ptr_helper-2) - ASCII_DIGIT_OFFSET)*10)
+									+ (*(ptr_helper-1) - ASCII_DIGIT_OFFSET));
+					}
+					if(*ptr_helper++ == '\0')
+						break;
+				}
+
+				itoa(tmpmask,str_helper,10);
+
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x1A;
+
+				strcpy(&xbeeTransmitString[4],str_helper);
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
 			else if(strcmp(key,"PRINT_CMD") == 0){
 
-				SEND_SERIAL_MSG("\nMSG#GET_TIME\r\n");
+				SEND_SERIAL_MSG("\nMSG#SEND_MESSAGE#<id>#<message>\r\n");
+				SEND_SERIAL_MSG("MSG#START_EXPERIMENT#<packet_count>\r\n");
+				SEND_SERIAL_MSG("MSG#GET_TIME\r\n");
 				SEND_SERIAL_MSG("MSG#SYNC_TIME\r\n");
 				SEND_SERIAL_MSG("MSG#GET_ADDRESS_HIGH\r\n");
 				SEND_SERIAL_MSG("MSG#GET_ADDRESS_LOW\r\n");
 				SEND_SERIAL_MSG("MSG#GET_POWER_SERIAL\r\n");
 				SEND_SERIAL_MSG("MSG#SET_POWER_SERIAL\r\n");
+				SEND_SERIAL_MSG("MSG#GET_CHANNELS_SERIAL\r\n");
+				SEND_SERIAL_MSG("MSG#SET_CHANNELS_SERIAL\r\n");
+				SEND_SERIAL_MSG("MSG#FIND_NEIGHBORS\r\n");
 				SEND_SERIAL_MSG("MSG#SET_EVENT#\r\n");
 				SEND_SERIAL_MSG("MSG#SET_EVENT_COORD\r\n");
 				SEND_SERIAL_MSG("MSG#SET_THRACC#\r\n");
@@ -651,15 +775,84 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#IDLE_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#INIT_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#STOP_ALL\r\n");
+				SEND_SERIAL_MSG("MSG#STOP_NODE\r\n");
 				SEND_SERIAL_MSG("MSG#GET_GPSCOORD_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#GET_GPSCOORD_NODE#\r\n");
-				SEND_SERIAL_MSG("MSG#GET_POWER\r\n");
-				SEND_SERIAL_MSG("MSG#SET_POWER\r\n");
+				SEND_SERIAL_MSG("MSG#GET_POWER#\r\n");
+				SEND_SERIAL_MSG("MSG#SET_POWER#<id>#<>\r\n");
+				SEND_SERIAL_MSG("MSG#GET_CHANNELS\r\n");
+				SEND_SERIAL_MSG("MSG#SET_CHANNELS#<id>#<ch>\r\n");
+			}
+			else if(strcmp(key,"PRINT_ACC_CMD") == 0){
+				SEND_SERIAL_MSG("\nMSG#<ACC_COMMANDS>\r\n");
+				SEND_SERIAL_MSG("MSG#LOCAL_INIT_ACC\r\n");
+				SEND_SERIAL_MSG("MSG#LOCAL_STOP_ACC\r\n");
+				SEND_SERIAL_MSG("MSG#LOCAL_GET_ACC\r\n");
+				SEND_SERIAL_MSG("MSG#START_ACC_EXPERIMENT\r\n");
+				SEND_SERIAL_MSG("MSG#SYNC_START_ACC\r\n");
+			}
+			else if(strcmp(key,"LOCAL_INIT_ACC") == 0){
+
+				errorTimer = 10;
+				initializeADXL362();
+				while(!return_ADXL_ready() && --errorTimer > 0){
+					//wait time for caps to discharge
+					delayMs(500);
+					initializeADXL362();
+					delayMs(500);
+					SEND_SERIAL_MSG("DEBUG#TRYING_TO_INIT_ACC...\r\n");
+				}
+
+				if(!errorTimer){
+					SEND_SERIAL_MSG("DEBUG#ACC_INIT_FAILED!!!\r\n");
+				}
+				else{
+					SEND_SERIAL_MSG("DEBUG#ACC_READY!!!\r\n");
+
+				TIM_Cmd(TIM14,ENABLE);
+				SEND_SERIAL_MSG("DEBUG#STARTING_ACC_TIMER!!!\r\n");
+				}
+			}
+			else if(strcmp(key,"LOCAL_STOP_ACC") == 0){
+
+				TIM_Cmd(TIM14,DISABLE);
+
+			}
+			else if(strcmp(key,"LOCAL_GET_ACC") == 0){
+
+
+			}
+			else if(strcmp(key,"START_ACC_EXPERIMENT") == 0){
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x1B;
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
+			else if(strcmp(key,"CHECK_MEMCPY") == 0){
+
+				uint32_t dumbDWord = 0xDEADBEEF;
+
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x1B;
+				memcpy(&xbeeTransmitString[3],&dumbDWord,4);
+				xbeeTransmitString[7] = '\0';
+				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
+			else if(strcmp(key,"SYNC_START_ACC") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C         \0");
+				xbeeTransmitString[2] = 0x1C;
+				transmitRequest(node[1].addressHigh,node[1].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+				delayMs(93);
+				TIM_Cmd(TIM14,ENABLE);
 			}
 			else{
 				// VERYWRONG DATA
 				SEND_SERIAL_MSG("MSG#WRONG_INPUT_DATA\r\n");
 				SEND_SERIAL_MSG("MSG#>>>PRINT_CMD<<<\r\n");
+				SEND_SERIAL_MSG("MSG#>>>PRINT_ACC_CMD<<<\r\n");
 			}
     		serialUpdated = false;
     	}
@@ -729,6 +922,43 @@ int main(void)
 
 				}else{
 					SEND_SERIAL_MSG("DEBUG#PL_AT_COMMAND_APPLY_ERROR\r\n");
+				}
+			}
+		}else if (strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "CM", 2) == 0) {
+			if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
+				if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+					channelMask = 0x00;
+					if(length == 9){
+						channelMask = (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA] << 24)
+								+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+1] << 16)
+								+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+2] << 8)
+								+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+3]);
+					}
+					else{
+						channelMask = (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA] << 8)
+								+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+1]);
+					}
+
+					tmpcounter = 0;
+					SEND_SERIAL_MSG("DEBUG#Channels_enabled");
+					for( ;tmpcounter < 30; tmpcounter++){
+						if(channelMask & (1 << tmpcounter)){
+							SEND_SERIAL_BYTE('_');
+							SEND_SERIAL_BYTE(tmpcounter/10 + ASCII_DIGIT_OFFSET);
+							SEND_SERIAL_BYTE(tmpcounter%10 + ASCII_DIGIT_OFFSET);
+						}
+					}
+					SEND_SERIAL_MSG("\r\n");
+				}else{
+					SEND_SERIAL_MSG("CM_AT_COMMAND_REQUEST_ERROR\r\n");
+				}
+			}else if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_APPLY){
+				if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+					SEND_SERIAL_MSG("DEBUG#CM_AT_COMMAND_APPLIED\r\n");
+					askXbeeParam("CM",AT_FRAME_ID_REQUEST);
+
+				}else{
+					SEND_SERIAL_MSG("DEBUG#CM_AT_COMMAND_APPLY_ERROR\r\n");
 				}
 			}
 		}
@@ -987,8 +1217,67 @@ int main(void)
 					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] + ASCII_DIGIT_OFFSET);
 					SEND_SERIAL_MSG("\r\n");
 				break;
+				case (0x8C):
+					receivedAddressHigh = 0x00;
+					receivedAddressLow = 0x00;
 
+					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
 
+						if(iterator<5){
+							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
+						}
+						else{
+							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
+						}
+					}
+
+					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
+						if(receivedAddressLow == node[niterator].addressLow )
+							tmpNode = niterator;
+					}
+					tmpmask = atoi(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
+
+					SEND_SERIAL_MSG("MSG#NODE#");
+					//id
+					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE('#');
+					SEND_SERIAL_MSG("CHANNELS_USED#");
+					tmpcounter = 0;
+
+					for( ;tmpcounter < 30; tmpcounter++){
+						if(tmpmask & (1 << tmpcounter)){
+							SEND_SERIAL_BYTE(tmpcounter/10 + ASCII_DIGIT_OFFSET);
+							SEND_SERIAL_BYTE(tmpcounter%10 + ASCII_DIGIT_OFFSET);
+							SEND_SERIAL_BYTE(' ');
+						}
+					}
+					SEND_SERIAL_MSG("\r\n");
+				break;
+				case (0x8D):	
+
+					/*
+					 * ACC EXPERIMENT RESPONSE
+					 */
+
+					SEND_SERIAL_MSG("Huge chunk of bytes received: ");
+
+					uint8_t sampleCounter;
+					char tmpAccString[6];
+
+					for(sampleCounter = 0; sampleCounter<1;sampleCounter++){
+
+						itoa( (xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2+sampleCounter] )
+								+ (xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+3+sampleCounter] << 8), tmpAccString, 10);
+						SEND_SERIAL_MSG(tmpAccString);
+						SEND_SERIAL_MSG("\r\n");
+					}
+
+				break;
+				case (0x1C):
+
+					TIM_Cmd(TIM14,ENABLE);
+
+				break;
 				case ('V'):
 					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
 					SEND_SERIAL_BYTE('#');
@@ -1086,6 +1375,8 @@ void USART1_IRQHandler(void){
 			TOGGLE_REDLED_SERIAL();
 			serialUpdated = true;
 			packetLenght = 0;
+			Usart1_Send('\r');
+			Usart1_Send('\n');
 		}
 	}
 }
@@ -1133,5 +1424,24 @@ void TIM2_IRQHandler()
 	{
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 		globalCounter++;
+	}
+}
+void TIM14_IRQHandler()
+{
+	if(TIM_GetITStatus(TIM14, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM14, TIM_IT_Update);
+
+		accBuff[accBuffValue++] = returnX_axis();
+
+		char accString[6];
+		itoa(accBuff[accBuffValue-1], accString, 10);
+		SEND_SERIAL_MSG(accString);
+		SEND_SERIAL_MSG("\r\n");
+
+		if(accBuffValue > ACC_BUFFER_SIZE-1){
+			accBuffValue = 0;
+		}
+
 	}
 }

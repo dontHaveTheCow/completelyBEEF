@@ -50,6 +50,7 @@ void initializeXbeeATTnPin(void);
 
 //Functions for AT commands, parameters
 void xbeeApplyParamter(char* atCommand, uint8_t parameter, uint8_t frameID);
+void xbeeApplyDwordParamter(char* atCommand, uint32_t parameter, uint8_t frameID);
 void askXbeeParam(char* atCommand, uint8_t frameID);
 bool xbeeStartupParamRead(uint8_t _packetErrorLimit, uint8_t* _xbeeBuffer);
 

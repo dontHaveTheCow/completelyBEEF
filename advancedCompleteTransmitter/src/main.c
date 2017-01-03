@@ -1,7 +1,7 @@
 /*
  * STM32 and C libraries
  */
-#include<stm32f0xx.h>
+#include <stm32f0xx.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -23,6 +23,7 @@
 #include "ADXL362.h"
 #include "A2035H.h"
 #include "sdCard.h"
+#include "accTimer.h"
 /*
  * Module state defines
  */
@@ -66,6 +67,8 @@ uint8_t turnOffTimer = 0;
 bool SPI1_Busy = false;
 uint32_t globalCounter = 0;
 bool timerUpdated = false;
+int16_t accBuff[5];
+uint8_t accBuffValue = 0;
 /*
  * GPS globals
  */
@@ -99,9 +102,7 @@ int main(void){
 	/*
 	 * Local variables for Accelerometer
 	 */
-	int16_t z = 0;
-	int16_t z_low = 0;
-	int16_t z_high = 0;
+	int16_t x = 0;
 	char messurementString[6];
 	/*
 	 * Local variables for SD card
@@ -149,6 +150,9 @@ int main(void){
 	//Timer counter with i=100ms
 	Initialize_timer();
 	Timer_interrupt_enable();
+	//acc_tim
+	Initialize_accTimer();
+	accTimer_interrupt_enable();
 	/*
 	 * Setup xbee as it is will be needed anyways
 	 * for node to be initialized through network
@@ -169,13 +173,13 @@ int main(void){
 
 		switch (moduleStatus) {
 		case MODULE_EXPERIMENT_MODE:
-			delayMs(800);
+			delayMs(300);
 			/*
 			 * Send Accelerometer data if chosen
 			 */
 			if(state&0x01){
-				getY(&z,&z_low,&z_high);
-				itoa(z, messurementString, 10);
+				x = (accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5;
+				itoa(x, messurementString, 10);
 				xbeeTransmitString[0] = 'M';
 				xbeeTransmitString[1] = ' ';
 				xbeeTransmitString[2] = '0';
@@ -193,7 +197,7 @@ int main(void){
 				}
 				xorGreenLed(0);
 			}
-			delayMs(800);
+			delayMs(300);
 			/*
 			 * Send GPS data if chosen
 			 */
@@ -254,15 +258,22 @@ int main(void){
 
 		case MODULE_INITIALIZING:
 			if(state&0x01){
+				errorTimer = 10;
 				//SPI2 for ADXL
 				initializeADXL362();
 				blinkRedLed1();
-				while(!return_ADXL_ready()){
+				while(!return_ADXL_ready() && --errorTimer > 0){
 					//wait time for caps to discharge
-					delayMs(2000);
+					delayMs(500);
 					initializeADXL362();
-					delayMs(1000);
+					delayMs(500);
 					blinkRedLed1();
+				}
+				if(!errorTimer){
+					state &=~(0x01);
+				}
+				else{
+					TIM_Cmd(TIM14,ENABLE);
 				}
 			}
 			errorTimer = 70;
@@ -659,3 +670,16 @@ void TIM2_IRQHandler()
 
 	}
 }
+
+void TIM14_IRQHandler()
+{
+	if(TIM_GetITStatus(TIM14, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM14, TIM_IT_Update);
+
+		accBuff[accBuffValue++] = returnX_axis();
+		if(accBuffValue > 4)
+			accBuffValue = 0;
+	}
+}
+

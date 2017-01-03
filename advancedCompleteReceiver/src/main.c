@@ -1,7 +1,7 @@
 /*
  * STM32 and C libraries
  */
-#include<stm32f0xx.h>
+#include <stm32f0xx.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -23,6 +23,7 @@
 #include "ADXL362.h"
 #include "A2035H.h"
 #include "sdCard.h"
+#include "accTimer.h"
 /*
  * Module state defines
  */
@@ -48,6 +49,7 @@
 #define XBEE_DATA_TYPE_OFFSET 14
 
 #define NUMBER_OF_NODES 4
+#define ACC_BUFFER_SIZE 50
 /*
  * XBEE globals
  */
@@ -63,6 +65,9 @@ struct node receiverNode;
 bool SPI1_Busy = false;
 uint32_t globalCounter = 0;
 bool timerUpdated = false;
+int16_t accBuff[ACC_BUFFER_SIZE];
+uint8_t accBuffValue = 0;
+bool accBufferFull = false;
 /*
  * GPS globals
  */
@@ -143,8 +148,9 @@ int main(void){
 	uint8_t commandStatus;
 	uint8_t AT_data[4];
 	uint8_t frameID;
-	char xbeeTransmitString[64];
+	char xbeeTransmitString[128];
 	uint16_t rssiDiff = 0;
+	uint32_t channelMask = 0x00;
 	/*
 	 *--- Accelerometer does not
 	 *--- have any variables
@@ -227,6 +233,8 @@ int main(void){
 	adcConfig();
 	Initialize_timer();
 	Timer_interrupt_enable();
+	Initialize_accTimer();
+	accTimer_interrupt_enable();
 
 	/*
 	 * Setup xbee as it is will be needed anyways
@@ -269,15 +277,22 @@ int main(void){
 			case MODULE_INITIALIZING:
 
 			if(state&0x01){
+				errorTimer = 10;
 				//SPI2 for ADXL
 				initializeADXL362();
 				blinkRedLed1();
-				while(!return_ADXL_ready()){
+				while(!return_ADXL_ready() && --errorTimer > 0){
 					//wait time for caps to discharge
-					delayMs(2000);
+					delayMs(500);
 					initializeADXL362();
-					delayMs(1000);
+					delayMs(500);
 					blinkRedLed1();
+				}
+				if(!errorTimer){
+					state &=~(0x01);
+				}
+				else{
+					TIM_Cmd(TIM14,ENABLE);
 				}
 			}
 			errorTimer = 70;
@@ -397,9 +412,24 @@ int main(void){
 				batteryIndicationStartup(ADC_value);
 
 				break;
+
+			case MODULE_EXPERIMENT_MODE:
+
+				//When buffer is full, send data to gateway
+				if(accBufferFull == true){
+					accBufferFull = false;
+					//Send buffer to gateway
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8D;
+					xbeeTransmitString[3] = ' ';
+					//xbeeTransmitString[4] = (accBuff[0] >> 8);
+					//xbeeTransmitString[5] = accBuff[0];
+					memcpy(&xbeeTransmitString[4],accBuff,2);
+					transmitRequestBytes(node[3].adressHigh,node[3].adressLow,TRANSOPT_DISACK, 0x00,&xbeeTransmitString[0],6);
+				}
+				break;
 		}
-
-
     	if(xbeeDataUpdated == true){
     		typeOfFrame = xbeeReceiveBuffer[0];
     		switch(typeOfFrame){
@@ -412,6 +442,7 @@ int main(void){
     			/*
     			 * Parse RSSI packet
     			 */
+
 				if(xbeeReceiveBuffer[2] == 'P' && xbeeReceiveBuffer[3] == 'L'){
 					if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
 						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
@@ -439,6 +470,43 @@ int main(void){
 
 						}else{
 							//SEND_SERIAL_MSG("DEBUG#PL_AT_COMMAND_APPLY_ERROR\r\n");
+						}
+					}
+				}
+				else if(xbeeReceiveBuffer[2] == 'C' && xbeeReceiveBuffer[3] == 'M'){
+					if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
+						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+
+							//channelMask
+							if(length == 9){
+								channelMask = (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA] << 24)
+										+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+1] << 16)
+										+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+2] << 8)
+										+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+3]);
+							}
+							else{
+								channelMask = (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA] << 8)
+										+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+1]);
+							}
+
+							strcpy(&xbeeTransmitString[0],"C  \0");
+							xbeeTransmitString[0] = 'C';
+							xbeeTransmitString[1] = ' ';
+							xbeeTransmitString[2] = 0x8C;
+							xbeeTransmitString[3] = ' ';
+							itoa(channelMask,&xbeeTransmitString[4],10);
+
+							transmitRequest(node[3].adressHigh,node[3].adressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+
+						}else{
+							//SEND_SERIAL_MSG("PL_AT_COMMAND_REQUEST_ERROR\r\n");
+						}
+					}else if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_APPLY){
+						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+
+							askXbeeParam("CM",AT_FRAME_ID_REQUEST);
+						}else{
+
 						}
 					}
 				}
@@ -506,8 +574,8 @@ int main(void){
 							itoa(accDiff,stringOfRelative,10);
 							xbeeTransmitString[4] = tmpNode + ASCII_DIGIT_OFFSET;
 							xbeeTransmitString[5] = '#';
-							xbeeTransmitString[6] = (rssiDiff / 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[7] = (rssiDiff % 10) + ASCII_DIGIT_OFFSET;
+							xbeeTransmitString[6] = (xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX] / 10) + ASCII_DIGIT_OFFSET;
+							xbeeTransmitString[7] = (xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX] % 10) + ASCII_DIGIT_OFFSET;
 							xbeeTransmitString[8] = '#';
 							xbeeTransmitString[9] = node[frameID-1].errorByte + ASCII_DIGIT_OFFSET;
 							xbeeTransmitString[10] = '#';
@@ -627,7 +695,7 @@ int main(void){
 					switch(node[tmpNode].state){
 						case ACC_STATE_CASE:
 							node[tmpNode].measurment[ACC_MEASUREMENT] = atoi(stringOfMessurement);
-							receiverNode.measurment[ACC_MEASUREMENT] = returnY_axis()     ;
+							receiverNode.measurment[ACC_MEASUREMENT] = (accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5;
 
 							accDiff = abs(receiverNode.measurment[ACC_MEASUREMENT] - node[tmpNode].measurment[ACC_MEASUREMENT]);
 
@@ -987,9 +1055,45 @@ int main(void){
 						 * 0x8B used for response
 						 */
 						break;
+					case (0x19):
+						//GET CHANNELS
+						askXbeeParam("CM",AT_FRAME_ID_REQUEST);
+						/*
+						 * 0x8C used for response
+						 */
+						break;
+					case (0x1A):
+						//SET CHANNELS
+						Usart1_SendString("Received channel info:");
+						Usart1_SendString(&xbeeReceiveBuffer[16]);
+						channelMask = atoi(&xbeeReceiveBuffer[16]);
+						xbeeApplyDwordParamter("CM",channelMask,AT_FRAME_ID_APPLY);
+
+						break;
+					case (0x1B):
+						//START ACC EXPERIMENT
+						if(moduleStatus == MODULE_IDLE){
+							moduleStatus = MODULE_EXPERIMENT_MODE;
+							accBuffValue = 0;
+							/*
+							 * Positive response
+							 */
+							strcpy(&xbeeTransmitString[0],"C  \0");
+							xbeeTransmitString[2] = 0x81;
+							transmitRequest(node[3].adressHigh,node[3].adressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						}
+						break;
 					default:
 						break;
 					}
+				}
+				else{
+					/*
+					 * If other data then commands or measurements were received
+					 */
+					SEND_SERIAL_MSG("Received data: ");
+					SEND_SERIAL_MSG(&xbeeReceiveBuffer[i]);
+					SEND_SERIAL_MSG("\r\n");
 				}
 				break;
 				case MODEM_STATUS:
@@ -1140,3 +1244,19 @@ void TIM2_IRQHandler()
 		timerUpdated = true;
 	}
 }
+
+void TIM14_IRQHandler()
+{
+	if(TIM_GetITStatus(TIM14, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM14, TIM_IT_Update);
+
+		accBuff[accBuffValue++] = returnX_axis();
+		if(accBuffValue > ACC_BUFFER_SIZE-1){
+			accBufferFull = true;
+			accBuffValue = 0;
+		}
+
+	}
+}
+

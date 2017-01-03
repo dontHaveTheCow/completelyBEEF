@@ -8,7 +8,7 @@ void initializeADXL362(void){
 	/*writeADXL326Register(0x29,0x03);
 	//Set stream mode and FIFO buffer MSB 0
 	writeADXL326Register(0x28,0b00000010); //FIFO enabled (stream) 0b0000001 */
-	//Set as measurement speed 12.5hz
+	//Set as measurement speed 100hz
 	writeADXL326Register(ADXL_FILTER_CTL_REGISTER,0b00010011);
 	//Set as ultra-low noise and measurement mode
 	writeADXL326Register(ADXL_POWER_CTL_REGISTER,0b00100010);

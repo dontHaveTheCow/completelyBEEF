@@ -50,6 +50,35 @@ void xbeeApplyParamter(char* atCommand, uint8_t parameter, uint8_t frameID){
 	XBEE_CS_HIGH();
 }
 
+void xbeeApplyDwordParamter(char* atCommand, uint32_t parameter, uint8_t frameID){
+
+	int8_t cheksum = 0;
+
+	XBEE_CS_LOW();
+	SPI1_TransRecieve(0x7E);
+	SPI1_TransRecieve(0x00);
+	SPI1_TransRecieve(0x08);
+	SPI1_TransRecieve(0x08); //AT command
+	cheksum += 0x08;
+	SPI1_TransRecieve(frameID); //Frame ID
+	cheksum += frameID;
+	SPI1_TransRecieve(atCommand[0]); //Command
+	cheksum += atCommand[0];
+	SPI1_TransRecieve(atCommand[1]);
+	cheksum += atCommand[1];
+	//Parameters goes here
+	SPI1_TransRecieve(parameter >> 24);
+	cheksum += (parameter >> 24);
+	SPI1_TransRecieve(parameter >> 16);
+	cheksum += (parameter >> 16);
+	SPI1_TransRecieve(parameter >> 8);
+	cheksum += (parameter >> 8);
+	SPI1_TransRecieve(parameter);
+	cheksum += parameter;
+	SPI1_TransRecieve(0xFF - cheksum); //Checksum
+	XBEE_CS_HIGH();
+}
+
 void askXbeeParam(char* atCommand, uint8_t frameID){
 
 	int8_t cheksum = 0;
@@ -105,6 +134,57 @@ void transmitRequest(uint32_t adrHigh, uint32_t adrLow, uint8_t transmitOption, 
 	int8_t cheksum = 0;
 	uint8_t  lenghtOfData, i = 0;
 	lenghtOfData = strlen(data);
+
+	GPIO_ResetBits(GPIOA,GPIO_Pin_4);
+	SPI1_TransRecieve(0x7E);
+	SPI1_TransRecieve(0x00);	//Lenght
+	SPI1_TransRecieve(14 + lenghtOfData);
+	SPI1_TransRecieve(0x10);	//FrameType
+	cheksum += 0x10;
+	SPI1_TransRecieve(frameID);	//Frame ID
+	cheksum += frameID;
+	SPI1_TransRecieve(adrHigh >> 24);	//64bit adress
+	cheksum += adrHigh >> 24;
+	SPI1_TransRecieve(adrHigh >> 16);
+	cheksum += adrHigh >> 16;
+	SPI1_TransRecieve(adrHigh >> 8);
+	cheksum += adrHigh >> 8;
+	SPI1_TransRecieve(adrHigh);
+	cheksum += adrHigh;
+	SPI1_TransRecieve(adrLow >> 24);
+	cheksum += adrLow >> 24;
+	SPI1_TransRecieve(adrLow >> 16);
+	cheksum += adrLow >> 16;
+	SPI1_TransRecieve(adrLow >> 8);
+	cheksum += adrLow >> 8;
+	SPI1_TransRecieve(adrLow);
+	cheksum += adrLow;
+	SPI1_TransRecieve(0xFF);	//Reserved
+	cheksum += 0xFF;
+	SPI1_TransRecieve(0xFE);
+	cheksum += 0xFE;
+	SPI1_TransRecieve(0x00);	//Broadcast radius
+	cheksum += 0x00;
+	SPI1_TransRecieve(0x00);	//Transmit options (Disable ack)
+	cheksum += 0x00;
+	for(; i < lenghtOfData; i++){	//RF data
+		SPI1_TransRecieve(data[i]);
+		cheksum += data[i];
+	}
+
+	SPI1_TransRecieve(0xFF - cheksum); //Cheksum
+
+	//Response from slave
+	//SPI1_TransRecieve(0x00);
+
+	GPIO_SetBits(GPIOA,GPIO_Pin_4);
+}
+
+void transmitRequestBytes(uint32_t adrHigh, uint32_t adrLow, uint8_t transmitOption, uint8_t frameID, uint8_t* data, uint8_t dataSize){
+
+	int8_t cheksum = 0;
+	uint8_t  lenghtOfData, i = 0;
+	lenghtOfData = dataSize;
 
 	GPIO_ResetBits(GPIOA,GPIO_Pin_4);
 	SPI1_TransRecieve(0x7E);

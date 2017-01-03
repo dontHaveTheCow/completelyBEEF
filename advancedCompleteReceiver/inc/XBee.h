@@ -49,6 +49,7 @@ extern bool readingPacket;
 void initializeXbeeATTnPin(void);
 
 //Functions for AT commands, parameters
+void xbeeApplyDwordParamter(char* atCommand, uint32_t parameter, uint8_t frameID);
 void xbeeApplyParamter(char* atCommand, uint8_t parameter, uint8_t frameID);
 void askXbeeParam(char* atCommand, uint8_t frameID);
 
@@ -56,5 +57,6 @@ bool xbeeStartupParamRead(uint8_t _packetErrorLimit, uint8_t* _xbeeBuffer);
 
 //Data transmission functions
 void transmitRequest(uint32_t adrHigh, uint32_t adrLow, uint8_t transmitOption, uint8_t frameID, char* data);
+void transmitRequestBytes(uint32_t adrHigh, uint32_t adrLow, uint8_t transmitOption, uint8_t frameID, uint8_t* data, uint8_t dataSize);
 
 #endif

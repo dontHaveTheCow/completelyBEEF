@@ -6,8 +6,8 @@ void Initialize_timer(void)
 	TIM_TimeBaseInitTypeDef Timer_init_structure;
 	Timer_init_structure.TIM_CounterMode = TIM_CounterMode_Up;
 	Timer_init_structure.TIM_ClockDivision = 0;
-	Timer_init_structure.TIM_Prescaler = PRESCALER_VALUE;
-	Timer_init_structure.TIM_Period = PERIOD_VALUE;
+	Timer_init_structure.TIM_Prescaler = TIM2_PRESCALER_VALUE;
+	Timer_init_structure.TIM_Period = TIM2_PERIOD_VALUE;
 	Timer_init_structure.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM2, &Timer_init_structure);
 

@@ -50,6 +50,35 @@ void xbeeApplyParamter(char* atCommand, uint8_t parameter, uint8_t frameID){
 	XBEE_CS_HIGH();
 }
 
+void xbeeApplyDwordParamter(char* atCommand, uint32_t parameter, uint8_t frameID){
+
+	int8_t cheksum = 0;
+
+	XBEE_CS_LOW();
+	SPI1_TransRecieve(0x7E);
+	SPI1_TransRecieve(0x00);
+	SPI1_TransRecieve(0x08);
+	SPI1_TransRecieve(0x08); //AT command
+	cheksum += 0x08;
+	SPI1_TransRecieve(frameID); //Frame ID
+	cheksum += frameID;
+	SPI1_TransRecieve(atCommand[0]); //Command
+	cheksum += atCommand[0];
+	SPI1_TransRecieve(atCommand[1]);
+	cheksum += atCommand[1];
+	//Parameters goes here
+	SPI1_TransRecieve(parameter >> 24);
+	cheksum += (parameter >> 24);
+	SPI1_TransRecieve(parameter >> 16);
+	cheksum += (parameter >> 16);
+	SPI1_TransRecieve(parameter >> 8);
+	cheksum += (parameter >> 8);
+	SPI1_TransRecieve(parameter);
+	cheksum += parameter;
+	SPI1_TransRecieve(0xFF - cheksum); //Checksum
+	XBEE_CS_HIGH();
+}
+
 void askXbeeParam(char* atCommand, uint8_t frameID){
 
 	int8_t cheksum = 0;
