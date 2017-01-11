@@ -32,7 +32,6 @@
 #define MODULE_IDLE 0x03
 #define MODULE_EXPERIMENT_MODE 0x04
 #define MODULE_SAFE_TURNOFF 0x05
-
 /*
  * Any other defines
  */
@@ -241,7 +240,6 @@ int main(void){
 			ADC_value = (ADC_GetConversionValue(ADC1));
 			ADC_value = (ADC_value * 330) / 128;
 			batteryIndicationStartup(ADC_value);
-
 			break;
 
 		case MODULE_SAFE_TURNOFF:
@@ -397,7 +395,6 @@ int main(void){
 			ADC_value = (ADC_GetConversionValue(ADC1));
 			ADC_value = (ADC_value * 330) / 128;
 			batteryIndicationStartup(ADC_value);
-
 			break;
 		}
 

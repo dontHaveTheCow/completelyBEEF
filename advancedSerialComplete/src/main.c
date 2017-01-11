@@ -828,17 +828,6 @@ int main(void)
 				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
 			}
-			else if(strcmp(key,"CHECK_MEMCPY") == 0){
-
-				uint32_t dumbDWord = 0xDEADBEEF;
-
-				strcpy(&xbeeTransmitString[0],"C  \0");
-				xbeeTransmitString[2] = 0x1B;
-				memcpy(&xbeeTransmitString[3],&dumbDWord,4);
-				xbeeTransmitString[7] = '\0';
-				transmitRequest(node[atoi(value)].addressHigh,node[atoi(value)].addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
-				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
-			}
 			else if(strcmp(key,"SYNC_START_ACC") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C         \0");
@@ -848,11 +837,33 @@ int main(void)
 				delayMs(93);
 				TIM_Cmd(TIM14,ENABLE);
 			}
+			else if(strcmp(key,"PRINT_DEBUG_CMD") == 0){
+				SEND_SERIAL_MSG("\nMSG#<DEBUG_COMMANDS>\r\n");
+				SEND_SERIAL_MSG("MSG#START_TEST_TIM2\r\n");
+				SEND_SERIAL_MSG("MSG#STOP_TEST_TIM2\r\n");
+				SEND_SERIAL_MSG("MSG#PRINT_TIM2\r\n");
+			}
+			else if(strcmp(key,"START_TEST_TIM2") == 0){
+				TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+
+			}
+			else if(strcmp(key,"STOP_TEST_TIM2") == 0){
+				TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+			}
+			else if(strcmp(key,"PRINT_TIM2") == 0){
+				globalCounter = TIM_GetCounter(TIM2);
+				itoa(globalCounter, timerString, 10);
+				SEND_SERIAL_MSG("Timer value ");
+				SEND_SERIAL_MSG(timerString);
+				SEND_SERIAL_MSG("\r\n");
+
+			}
 			else{
 				// VERYWRONG DATA
 				SEND_SERIAL_MSG("MSG#WRONG_INPUT_DATA\r\n");
 				SEND_SERIAL_MSG("MSG#>>>PRINT_CMD<<<\r\n");
 				SEND_SERIAL_MSG("MSG#>>>PRINT_ACC_CMD<<<\r\n");
+				SEND_SERIAL_MSG("MSG#>>>PRINT_DEBUG_CMD<<<\r\n");
 			}
     		serialUpdated = false;
     	}
@@ -1422,8 +1433,9 @@ void TIM2_IRQHandler()
 {
 	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
 	{
+		XBEE_CS_LOW();
+		XBEE_CS_HIGH();
 		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-		globalCounter++;
 	}
 }
 void TIM14_IRQHandler()

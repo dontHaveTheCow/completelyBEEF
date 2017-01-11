@@ -9,8 +9,8 @@
 #include <stm32f0xx_misc.h>
 
 //These are the Define statements
-#define TIM2_PRESCALER_VALUE 800
-#define TIM2_PERIOD_VALUE 1000
+#define TIM2_PRESCALER_VALUE 48000 //1 tick equals 1ms
+#define TIM2_PERIOD_VALUE 0xFFFFFFFF
 
 //These are the prototypes for the routines
 void Initialize_timer(void);

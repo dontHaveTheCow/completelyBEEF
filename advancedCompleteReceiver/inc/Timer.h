@@ -9,8 +9,8 @@
 #include <stm32f0xx_misc.h>
 
 //These are the Define statements
-#define PRESCALER_VALUE 4800
-#define PERIOD_VALUE 200
+#define PRESCALER_VALUE 48000
+#define PERIOD_VALUE 0xffffffff
 
 //These are the prototypes for the routines
 void Initialize_timer(void);

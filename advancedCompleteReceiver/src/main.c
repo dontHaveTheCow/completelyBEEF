@@ -49,7 +49,7 @@
 #define XBEE_DATA_TYPE_OFFSET 14
 
 #define NUMBER_OF_NODES 4
-#define ACC_BUFFER_SIZE 50
+#define ACC_BUFFER_SIZE 20
 /*
  * XBEE globals
  */
@@ -63,7 +63,7 @@ bool xbeeReading = false;
 uint8_t turnOffTimer = 0;
 struct node receiverNode;
 bool SPI1_Busy = false;
-uint32_t globalCounter = 0;
+//uint32_t globalCounter = 0;
 bool timerUpdated = false;
 int16_t accBuff[ACC_BUFFER_SIZE];
 uint8_t accBuffValue = 0;
@@ -232,7 +232,7 @@ int main(void){
 	//ADC is used for battery monitoring
 	adcConfig();
 	Initialize_timer();
-	Timer_interrupt_enable();
+	//Timer_interrupt_enable();
 	Initialize_accTimer();
 	accTimer_interrupt_enable();
 
@@ -415,19 +415,6 @@ int main(void){
 
 			case MODULE_EXPERIMENT_MODE:
 
-				//When buffer is full, send data to gateway
-				if(accBufferFull == true){
-					accBufferFull = false;
-					//Send buffer to gateway
-					xbeeTransmitString[0] = 'C';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = 0x8D;
-					xbeeTransmitString[3] = ' ';
-					//xbeeTransmitString[4] = (accBuff[0] >> 8);
-					//xbeeTransmitString[5] = accBuff[0];
-					memcpy(&xbeeTransmitString[4],accBuff,2);
-					transmitRequestBytes(node[3].adressHigh,node[3].adressLow,TRANSOPT_DISACK, 0x00,&xbeeTransmitString[0],6);
-				}
 				break;
 		}
     	if(xbeeDataUpdated == true){
@@ -686,7 +673,7 @@ int main(void){
 					stringOfMessurement[n] = xbeeReceiveBuffer[i-1];
 
 					//Measure the time when packet was received
-					node[tmpNode].packetTime = globalCounter;
+					node[tmpNode].packetTime = TIM_GetCounter(TIM2);
 
 /*					SEND_SERIAL_BYTE(tmpNode + 0x30);
 					SEND_SERIAL_MSG(stringOfMessurement);
@@ -784,12 +771,16 @@ int main(void){
 					case (0x01):
 						//Timer sync. request
 						GPIOB->ODR ^= (1 << (5+tmpNode));
-						itoa(globalCounter,timerString,10);
+						itoa(TIM_GetCounter(TIM2),timerString,10);
 		    		    xbeeTransmitString[0] = 'C';
 		    		    xbeeTransmitString[1] = ' ';
 		    		    xbeeTransmitString[2] = 0x80;
 		    		    xbeeTransmitString[3] = ' ';
 		    		    strcpy(&xbeeTransmitString[4],&timerString[0]);
+		    		    /*
+		    		     * Need to add time window
+		    		     */
+
 						SPI1_Busy = true;
 						transmitRequest(node[tmpNode].adressHigh, node[tmpNode].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						SPI1_Busy = false;
@@ -801,7 +792,7 @@ int main(void){
 						 */
 						if(((state&0x04) >> 2)){
 
-							itoa(globalCounter, timerString,10);
+							itoa(TIM_GetCounter(TIM2), timerString,10);
 							SPI1_Busy = true;
 							appendTextToTheSD("EVENT",' ',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
 							appendTextToTheSD(timerString,' ',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
@@ -1070,19 +1061,6 @@ int main(void){
 						xbeeApplyDwordParamter("CM",channelMask,AT_FRAME_ID_APPLY);
 
 						break;
-					case (0x1B):
-						//START ACC EXPERIMENT
-						if(moduleStatus == MODULE_IDLE){
-							moduleStatus = MODULE_EXPERIMENT_MODE;
-							accBuffValue = 0;
-							/*
-							 * Positive response
-							 */
-							strcpy(&xbeeTransmitString[0],"C  \0");
-							xbeeTransmitString[2] = 0x81;
-							transmitRequest(node[3].adressHigh,node[3].adressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
-						}
-						break;
 					default:
 						break;
 					}
@@ -1167,7 +1145,7 @@ int main(void){
     			if(node[i].packetTime == 0){
     				continue;
     			}
-    			timDiff = globalCounter - node[i].packetTime;
+    			timDiff = TIM_GetCounter(TIM2) - node[i].packetTime;
     			if(timDiff > thresholdTIM){
     				/*
     				 * TIM_DNG
@@ -1235,7 +1213,7 @@ void EXTI4_15_IRQHandler(void)					//External interrupt handlers
 	}
 }
 
-void TIM2_IRQHandler()
+/*void TIM2_IRQHandler()
 {
 	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
 	{
@@ -1243,7 +1221,7 @@ void TIM2_IRQHandler()
 		globalCounter++;
 		timerUpdated = true;
 	}
-}
+}*/
 
 void TIM14_IRQHandler()
 {
