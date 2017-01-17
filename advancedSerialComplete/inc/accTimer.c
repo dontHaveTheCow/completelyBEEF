@@ -10,6 +10,7 @@ void Initialize_accTimer(void){
 	Timer_init_structure.TIM_Period = TIM14_PERIOD_VALUE;
 	Timer_init_structure.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM14, &Timer_init_structure);
+
 }
 
 void accTimer_interrupt_enable(void){

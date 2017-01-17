@@ -11,6 +11,9 @@ void Initialize_timer(void)
 	Timer_init_structure.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM2, &Timer_init_structure);
 
+	TIM_Cmd(TIM2,ENABLE);
+
+	//RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, DISABLE);
 }
 
 void Timer_interrupt_enable(void)
@@ -20,8 +23,7 @@ void Timer_interrupt_enable(void)
 	NVIC_structure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_structure.NVIC_IRQChannelPriority = 0x01;
 	NVIC_Init(&NVIC_structure);
-	TIM_Cmd(TIM2,ENABLE);
-	TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
 }
 
 

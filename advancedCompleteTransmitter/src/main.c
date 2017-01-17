@@ -24,6 +24,7 @@
 #include "A2035H.h"
 #include "sdCard.h"
 #include "accTimer.h"
+#include "transmitTimer.h"
 /*
  * Module state defines
  */
@@ -47,6 +48,7 @@
 #define GPS_COORD_CASE 0x02
 #define XBEE_DATA_MODE_OFFSET 12
 #define XBEE_DATA_TYPE_OFFSET 14
+#define TIMER_SYNC_DELAY 92 //92 ms for 10 byte packet
 
 #define COORDINATOR_ADDR_HIGH 0x0013A200
 #define COORDINATOR_ADDR_LOW 0x40E3E13A
@@ -120,8 +122,10 @@ int main(void){
 	uint8_t moduleStatus = MODULE_NOT_INITIALIZED;
 	uint16_t ADC_value;
 	uint8_t errorTimer = 40;
+	uint8_t timerWindow = 0xFF;
 	char timerString[16] = " ";
 	char itoaConversionString[8];
+
 	/*
 	 * Initializing gpio's
 	 */
@@ -146,12 +150,15 @@ int main(void){
 	InitialiseSPI1();
 	//ADC is used for battery monitoring
 	adcConfig();
-	//Timer counter with i=100ms
+	//Timer counter with i=1ms
 	Initialize_timer();
-	Timer_interrupt_enable();
 	//acc_tim
 	Initialize_accTimer();
 	accTimer_interrupt_enable();
+	//Transmit timer - interrupt disabled by default
+	Initialize_transmitTimer();
+	transmitTimer_interrupt_enable();
+
 	/*
 	 * Setup xbee as it is will be needed anyways
 	 * for node to be initialized through network
@@ -450,6 +457,11 @@ int main(void){
 				if(xbeeReceiveBuffer[XBEE_DATA_MODE_OFFSET] == 'C'){
 
 					switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
+					case (0x80):
+						TIM_SetCounter(TIM2,atoi(&xbeeReceiveBuffer[18]) + TIMER_SYNC_DELAY);
+						timerWindow = xbeeReceiveBuffer[16];
+
+						break;
 					case (0x0F):
 						/*
 						 * Init. request
@@ -469,6 +481,14 @@ int main(void){
 					case (0x10):
 						if(moduleStatus == MODULE_IDLE){
 							moduleStatus = MODULE_EXPERIMENT_MODE;
+
+							/*
+							 * Start new timer interrupt based on window calculation
+							 */
+							TIM_SetCounter(TIM15,0);
+							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+							TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
+
 							/*
 							 * Positive response
 							 */
@@ -658,15 +678,6 @@ void EXTI4_15_IRQHandler(void)					//External interrupt handlers
 	}
 }
 
-void TIM2_IRQHandler()
-{
-	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
-	{
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-		globalCounter++;
-
-	}
-}
 
 void TIM14_IRQHandler()
 {
@@ -677,6 +688,19 @@ void TIM14_IRQHandler()
 		accBuff[accBuffValue++] = returnX_axis();
 		if(accBuffValue > 4)
 			accBuffValue = 0;
+	}
+}
+
+void TIM15_IRQHandler()
+{
+	if(TIM_GetITStatus(TIM15, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+
+		/*
+		 * Transmit shit here
+		 */
+
 	}
 }
 

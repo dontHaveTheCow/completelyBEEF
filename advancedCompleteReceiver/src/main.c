@@ -759,13 +759,8 @@ int main(void){
 						}
 				}
 				else if(xbeeReceiveBuffer[i] == 'C'){
-					/*
-					 * Example
-					 * C 0 -> Request for timestamp
-					 * C 1
-					 */
-					i++;
 
+					i++;
 					switch(xbeeReceiveBuffer[++i]){
 
 					case (0x01):
@@ -776,11 +771,12 @@ int main(void){
 		    		    xbeeTransmitString[1] = ' ';
 		    		    xbeeTransmitString[2] = 0x80;
 		    		    xbeeTransmitString[3] = ' ';
-		    		    strcpy(&xbeeTransmitString[4],&timerString[0]);
+		    		    xbeeTransmitString[4] = tmpNode; //dummy id
+		    		    xbeeTransmitString[5] = ' ';
+		    		    strcpy(&xbeeTransmitString[6],&timerString[0]);
 		    		    /*
 		    		     * Need to add time window
 		    		     */
-
 						SPI1_Busy = true;
 						transmitRequest(node[tmpNode].adressHigh, node[tmpNode].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						SPI1_Busy = false;
@@ -1136,20 +1132,20 @@ int main(void){
 			}
     	}
 
-    	if(timerUpdated == true){
+/*    	if(timerUpdated == true){
 
-    		/*
+
     		 * We are not interested in checkin serial nodes timeout
-    		 */
+
     		for(i = 0; i < NUMBER_OF_NODES-1; i++){
     			if(node[i].packetTime == 0){
     				continue;
     			}
     			timDiff = TIM_GetCounter(TIM2) - node[i].packetTime;
     			if(timDiff > thresholdTIM){
-    				/*
+
     				 * TIM_DNG
-    				 */
+
     				node[i].packetTime = 0;
 					strcpy(&xbeeTransmitString[0],"C V#");
 					itoa(timDiff,stringOfMessurement,10);
@@ -1160,7 +1156,7 @@ int main(void){
     			}
     		}
     		timerUpdated = false;
-    	}
+    	}*/
     }
 }
 

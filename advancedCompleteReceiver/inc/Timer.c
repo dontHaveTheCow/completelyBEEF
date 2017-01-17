@@ -10,6 +10,7 @@ void Initialize_timer(void)
 	Timer_init_structure.TIM_Period = PERIOD_VALUE;
 	Timer_init_structure.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM2, &Timer_init_structure);
+	TIM_Cmd(TIM2,ENABLE);
 
 }
 

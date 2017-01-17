@@ -18,13 +18,14 @@
 #include "SPI2.h"
 #include "ADXL362.h"
 #include "accTimer.h"
+#include "transmitTimer.h"
 /*
  * XBEE defines
  */
 #define ERROR_TIMER_COUNT 30
 #define XBEE_DATA_MODE_OFFSET 12
 #define XBEE_DATA_TYPE_OFFSET 14
-#define TIMER_SYNC_DELAY 5
+#define TIMER_SYNC_DELAY 92 //ms
 
 #define COORDINATOR_ADDR_HIGH 0x0013A200
 #define COORDINATOR_ADDR_LOW 0x40E3E13A
@@ -41,7 +42,7 @@
 #define TOGGLE_REDLED_XBEE() GPIOB->ODR ^= GPIO_Pin_6
 #define SET_REDLED_SERIAL() GPIOB->ODR |= GPIO_Pin_5
 
-#define ACC_BUFFER_SIZE 70
+#define ACC_BUFFER_SIZE 20
 /*
  * Serial globals
  */
@@ -59,7 +60,7 @@ bool xbeeReading = false;
 /*
  * Module globals
  */
-uint32_t globalCounter = 0;
+//uint32_t globalCounter = 0;
 int16_t accBuff[ACC_BUFFER_SIZE];
 uint8_t accBuffValue = 0;
 
@@ -123,7 +124,10 @@ int main(void)
 	InitialiseSPI1();
 	Configure_SPI1_interrupt();
 	Initialize_timer();
-	Timer_interrupt_enable();
+	//Timer_interrupt_enable();
+	Initialize_transmitTimer();
+	transmitTimer_interrupt_enable();
+
 	//acelerometer stuff
 	InitialiseSPI2_GPIO();
 	InitialiseSPI2();
@@ -183,12 +187,8 @@ int main(void)
     		else if(strcmp(key,"GET_TIME") == 0){
 
 				SEND_SERIAL_MSG("MSG#CURRENT_TIME#");
-				SEND_SERIAL_BYTE((globalCounter%1000000)/100000 + ASCII_DIGIT_OFFSET);
-				SEND_SERIAL_BYTE((globalCounter%100000)/10000 + ASCII_DIGIT_OFFSET);
-				SEND_SERIAL_BYTE((globalCounter%10000)/1000 + ASCII_DIGIT_OFFSET);
-				SEND_SERIAL_BYTE((globalCounter%1000)/100 + ASCII_DIGIT_OFFSET);
-				SEND_SERIAL_BYTE((globalCounter%100)/10 + ASCII_DIGIT_OFFSET);
-				SEND_SERIAL_BYTE(globalCounter%10 + ASCII_DIGIT_OFFSET);
+				itoa(TIM_GetCounter(TIM2),timerString,10);
+				SEND_SERIAL_MSG(timerString);
 				SEND_SERIAL_MSG("\r\n");
 			}
 			else if(strcmp(key,"GET_ADDRESS_HIGH") == 0){
@@ -252,7 +252,7 @@ int main(void)
 				SEND_SERIAL_MSG("EVENTS#");
 				SEND_SERIAL_MSG(value);
 				SEND_SERIAL_BYTE('#');
-				itoa(globalCounter,timerString, 10);
+				itoa(TIM_GetCounter(TIM2),timerString,10);
 				SEND_SERIAL_MSG(timerString);
 				SEND_SERIAL_MSG("\r\n");
 			}
@@ -819,8 +819,7 @@ int main(void)
 
 			}
 			else if(strcmp(key,"LOCAL_GET_ACC") == 0){
-
-
+				TIM_Cmd(TIM14,ENABLE);
 			}
 			else if(strcmp(key,"START_ACC_EXPERIMENT") == 0){
 				strcpy(&xbeeTransmitString[0],"C  \0");
@@ -842,21 +841,46 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#START_TEST_TIM2\r\n");
 				SEND_SERIAL_MSG("MSG#STOP_TEST_TIM2\r\n");
 				SEND_SERIAL_MSG("MSG#PRINT_TIM2\r\n");
+				SEND_SERIAL_MSG("MSG#PRINT_TIM14\r\n");
+				SEND_SERIAL_MSG("MSG#PRINT_TIM15\r\n");
+				SEND_SERIAL_MSG("MSG#START_TIM15\r\n");
+				SEND_SERIAL_MSG("MSG#STOP_TIM15\r\n");
 			}
 			else if(strcmp(key,"START_TEST_TIM2") == 0){
-				TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+				TIM_Cmd(TIM2,ENABLE);
 
 			}
 			else if(strcmp(key,"STOP_TEST_TIM2") == 0){
-				TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
+				TIM_Cmd(TIM2,DISABLE);
 			}
 			else if(strcmp(key,"PRINT_TIM2") == 0){
-				globalCounter = TIM_GetCounter(TIM2);
-				itoa(globalCounter, timerString, 10);
-				SEND_SERIAL_MSG("Timer value ");
+				itoa(TIM_GetCounter(TIM2),timerString,10);
+				SEND_SERIAL_MSG("Timer2 value ");
 				SEND_SERIAL_MSG(timerString);
 				SEND_SERIAL_MSG("\r\n");
-
+			}
+			else if(strcmp(key,"PRINT_TIM14") == 0){
+				itoa(TIM_GetCounter(TIM14),timerString,10);
+				SEND_SERIAL_MSG("Timer14 value ");
+				SEND_SERIAL_MSG(timerString);
+				SEND_SERIAL_MSG("\r\n");
+			}
+			else if(strcmp(key,"PRINT_TIM15") == 0){
+				itoa(TIM_GetCounter(TIM15),timerString,10);
+				SEND_SERIAL_MSG("Timer15 value ");
+				SEND_SERIAL_MSG(timerString);
+				SEND_SERIAL_MSG("\r\n");
+			}
+			else if(strcmp(key,"START_TIM15") == 0){
+				TIM_SetCounter(TIM15,0);
+				TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+				TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
+				SEND_SERIAL_MSG("Timer15 enabled\r\n");
+			}
+			else if(strcmp(key,"STOP_TIM15") == 0){
+				TIM_ITConfig(TIM15, TIM_IT_Update, DISABLE);
+				SEND_SERIAL_MSG("Timer15 value ");
+				SEND_SERIAL_MSG("Timer15 disabled\r\n");
 			}
 			else{
 				// VERYWRONG DATA
@@ -992,15 +1016,15 @@ int main(void)
 				switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
 
 				case (0x80):
-					globalCounter = atoi(&xbeeReceiveBuffer[16]) + TIMER_SYNC_DELAY;
 					SEND_SERIAL_MSG("MSG#TIMER#SYNCHRONIZED...\r\n");
+					TIM_SetCounter(TIM2,atoi(&xbeeReceiveBuffer[18]) + TIMER_SYNC_DELAY);
+					SEND_SERIAL_MSG("MSG#TIME_WINDOW#");
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[16] + 0x30);
+					SEND_SERIAL_BYTE('\r');
+					SEND_SERIAL_BYTE('\n');
 					SEND_SERIAL_MSG("MSG#CURRENT_TIME#");
-					SEND_SERIAL_BYTE((globalCounter%1000000)/100000 + ASCII_DIGIT_OFFSET);
-					SEND_SERIAL_BYTE((globalCounter%100000)/10000 + ASCII_DIGIT_OFFSET);
-					SEND_SERIAL_BYTE((globalCounter%10000)/1000 + ASCII_DIGIT_OFFSET);
-					SEND_SERIAL_BYTE((globalCounter%1000)/100 + ASCII_DIGIT_OFFSET);
-					SEND_SERIAL_BYTE((globalCounter%100)/10 + ASCII_DIGIT_OFFSET);
-					SEND_SERIAL_BYTE(globalCounter%10 + ASCII_DIGIT_OFFSET);
+					itoa(TIM_GetCounter(TIM2),timerString,10);
+					SEND_SERIAL_MSG(timerString);
 					SEND_SERIAL_MSG("\r\n");
 					break;
 				case (0x81):
@@ -1429,13 +1453,12 @@ void EXTI4_15_IRQHandler(void){
 	}
 }
 
-void TIM2_IRQHandler()
+void TIM15_IRQHandler()
 {
-	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
+	if(TIM_GetITStatus(TIM15, TIM_IT_Update) != RESET)
 	{
-		XBEE_CS_LOW();
-		XBEE_CS_HIGH();
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
+		TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+		SEND_SERIAL_MSG("800ms\r\n");
 	}
 }
 void TIM14_IRQHandler()

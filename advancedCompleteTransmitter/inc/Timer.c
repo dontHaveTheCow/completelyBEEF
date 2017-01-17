@@ -21,7 +21,7 @@ void Timer_interrupt_enable(void)
 	NVIC_structure.NVIC_IRQChannelPriority = 0x01;
 	NVIC_Init(&NVIC_structure);
 	TIM_Cmd(TIM2,ENABLE);
-	TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+	TIM_ITConfig(TIM2, TIM_IT_Update, DISABLE);
 }
 
 
