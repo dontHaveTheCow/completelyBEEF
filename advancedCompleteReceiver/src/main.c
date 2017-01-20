@@ -42,9 +42,10 @@
 #define RSSI_MEASUREMENT 0x01
 #define ERROR_TIMER_COUNT 30
 #define STARTUP_ERROR_TIMER_COUNT 5
-#define ACC_STATE_CASE 0x00
-#define GPS_STATE_CASE 0x01
-#define GPS_COORD_CASE 0x02
+#define ACC_STATE_CASE 0x01
+#define GPS_STATE_CASE 0x02
+#define ACCGPS_STATE_CASE 0x03
+#define GPS_COORD_CASE 0x04
 #define XBEE_DATA_MODE_OFFSET 12
 #define XBEE_DATA_TYPE_OFFSET 14
 
@@ -74,6 +75,7 @@ bool accBufferFull = false;
 char gpsReceiveString[96];
 uint8_t gpsReadIterator;
 volatile bool gpsDataUpdated = false;
+char velocityString[6] = " ";
 /*
  * Struct for node measurements, id's...
  */
@@ -171,7 +173,7 @@ int main(void){
     char lond[2]= " ";
     char fix[2]= "0";
     char sats[3]= " ";
-    char velocityString[6] = " ";
+
     char *ptrToNMEA[] = {ts, lat, latd, lon, lond, fix, sats};
 	uint8_t messageIterator;
 	float velocityDiff;
@@ -198,6 +200,8 @@ int main(void){
 	uint8_t tmpNode;//
 	char timerString[10];
 	char stringOfMessurement[32] = "";
+	char stringOfACC[16] = "";
+	char stringOfGPS[16] = "";
 	char stringOfRelative[6] = "";
 	uint16_t thresholdACC = 120;
 	uint8_t thresholdGPS = 5;
@@ -260,7 +264,6 @@ int main(void){
 				ADC_value = (ADC_GetConversionValue(ADC1));
 				ADC_value = (ADC_value * 330) / 128;
 				batteryIndicationStartup(ADC_value);
-
 				break;
 
 			case MODULE_SAFE_TURNOFF:
@@ -269,6 +272,12 @@ int main(void){
 	    		}
 	    		if((state&0x02) >> 1){
 	    			hibernateGps();
+	    		}
+	    		if(state&0x01){
+	    			/*
+	    			 * Stop acc
+	    			 */
+	    			TIM_Cmd(TIM14,DISABLE);
 	    		}
 	    		state = 0;
 	    		moduleStatus = MODULE_NOT_INITIALIZED;
@@ -290,6 +299,14 @@ int main(void){
 				}
 				if(!errorTimer){
 					state &=~(0x01);
+
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x01; //acc not initialized error
+					xbeeTransmitString[5] = '\0';
+					transmitRequest(node[3].adressHigh, node[3].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 				}
 				else{
 					TIM_Cmd(TIM14,ENABLE);
@@ -344,9 +361,16 @@ int main(void){
 				}
 				//if not enough satellites are found, turn off gps
 				if(!errorTimer){
-					SEND_SERIAL_MSG("GPS timeout...\r\n");
 					hibernateGps();
 					state &= 0xFD;
+
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x02; //gps not initialized error
+					xbeeTransmitString[5] = '\0';
+					transmitRequest(node[3].adressHigh, node[3].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 				}
 				else{
 					//if satellites found -> turn on $GPVTG to monitor velocity
@@ -373,6 +397,14 @@ int main(void){
 				if(!errorTimer){
 					//If sd card doesnt turn on, dont log anything to it
 					state &= 0xFB;
+
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x03; //sd not initialized error
+					xbeeTransmitString[5] = '\0';
+					transmitRequest(node[3].adressHigh, node[3].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 				}
 				else{
 
@@ -399,7 +431,7 @@ int main(void){
 			xbeeTransmitString[3] = '#';
 			xbeeTransmitString[4] = state;
 			xbeeTransmitString[5] = '\0';
-			transmitRequest(node[tmpNode].adressHigh, node[tmpNode].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+			transmitRequest(node[3].adressHigh, node[3].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 			moduleStatus = 	MODULE_IDLE;
 			break;
@@ -568,7 +600,7 @@ int main(void){
 							xbeeTransmitString[10] = '#';
 							strcpy(&xbeeTransmitString[11],stringOfRelative);
 							strcat(xbeeTransmitString,"#");
-							strcat(xbeeTransmitString,stringOfMessurement);
+							strcat(xbeeTransmitString,stringOfACC);
 						}
 						else if(node[tmpNode].state == GPS_STATE_CASE){
 							xbeeTransmitString[0] = 'C';
@@ -585,7 +617,7 @@ int main(void){
 							xbeeTransmitString[10] = '#';
 							strcpy(&xbeeTransmitString[11],stringOfRelative);
 							strcat(xbeeTransmitString,"#");
-							strcat(xbeeTransmitString,stringOfMessurement);
+							strcat(xbeeTransmitString,stringOfGPS);
 						}
 						else if(node[tmpNode].state == GPS_COORD_CASE){
 
@@ -659,104 +691,88 @@ int main(void){
 				 */
 				if(xbeeReceiveBuffer[i] == 'M'){
 					/*
-					 * Example
-					 * M 0 45
-					 * M 1 10.2
+					 * "M <state>#<acc>#<gps>"
 					 */
 					i = i + 2;
-					node[tmpNode].state = xbeeReceiveBuffer[i++] - 0x30;	//Calculate the integer from ASCII by subtracting 0x30
+					node[tmpNode].state = xbeeReceiveBuffer[i++];
 
-					n = 0;
-					while (xbeeReceiveBuffer[i++] != '\0'){
+/*				n = 0;
+				while (xbeeReceiveBuffer[i++] != '\0'){
 						stringOfMessurement[n++] = xbeeReceiveBuffer[i];
 					}
-					stringOfMessurement[n] = xbeeReceiveBuffer[i-1];
+					stringOfMessurement[n] = xbeeReceiveBuffer[i-1];*/
 
+					if((node[tmpNode].state&0x03) == ACCGPS_STATE_CASE){
+						//load into stringOfACC
+						//load into stringOfGPS
+						str_splitter(&xbeeReceiveBuffer[i+1],stringOfACC,stringOfGPS,"#");
+					}
+					else if((node[tmpNode].state&0x01) == ACC_STATE_CASE){
+						//load only stringOfACC
+						//str_splitter(&xbeeReceiveBuffer[i+1],stringOfGPS,stringOfACC,"#");
+						strcpy(stringOfACC,&xbeeReceiveBuffer[i+1]);
+					}
+					else if((node[tmpNode].state&0x02) == GPS_STATE_CASE){
+						//load only stringOfGPS
+						//str_splitter(&xbeeReceiveBuffer[i],stringOfACC,stringOfGPS,"#");
+						strcpy(stringOfGPS,&xbeeReceiveBuffer[i+1]);
+					}
 					//Measure the time when packet was received
 					node[tmpNode].packetTime = TIM_GetCounter(TIM2);
+					/*
+					 * THIS IS WHERE THE MEASUREMENT COMPAREMENT HAPPENS
+					 */
+					if((node[tmpNode].state&0x01) == ACC_STATE_CASE){
 
-/*					SEND_SERIAL_BYTE(tmpNode + 0x30);
-					SEND_SERIAL_MSG(stringOfMessurement);
-					SEND_SERIAL_MSG(":Received\r\n");*/
+						node[tmpNode].measurment[ACC_MEASUREMENT] = atoi(stringOfACC);
+						receiverNode.measurment[ACC_MEASUREMENT] = (accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5;
 
-					switch(node[tmpNode].state){
-						case ACC_STATE_CASE:
-							node[tmpNode].measurment[ACC_MEASUREMENT] = atoi(stringOfMessurement);
-							receiverNode.measurment[ACC_MEASUREMENT] = (accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5;
+						accDiff = abs(receiverNode.measurment[ACC_MEASUREMENT] - node[tmpNode].measurment[ACC_MEASUREMENT]);
 
-							accDiff = abs(receiverNode.measurment[ACC_MEASUREMENT] - node[tmpNode].measurment[ACC_MEASUREMENT]);
-
-							if(accDiff > thresholdACC){
-								node[tmpNode].errorByte |= 0x01;
-								//add sd card accelerometer error code
-								if(((state&0x04) >> 2)){
-									SPI1_Busy = true;
-									appendTextToTheSD(stringOfMessurement, ' ',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-									SPI1_Busy = false;
-								}
-							}
-							else {
-								node[tmpNode].errorByte &= 0x06;
-								//if sd card is in use, log to it
-								if(((state&0x04) >> 2)){
-									SPI1_Busy = true;
-									appendTextToTheSD(stringOfMessurement, ' ',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-									SPI1_Busy = false;
-								}
-							}
-							//after receiving acc measurement, ask module for last packets RSSI
-							askXbeeParam("DB",tmpNode+1);
-							break;
-
-						case GPS_STATE_CASE:
-							node[tmpNode].velocity = stof(stringOfMessurement);
-							if(gpsDataUpdated == true){
-								gpsDataUpdated = false;
-								gps_parseGPVTG(gpsReceiveString,velocityString);
-								receiverNode.velocity = stof(velocityString);
-/*								SEND_SERIAL_MSG(velocityString);
-								SEND_SERIAL_MSG(":MyVel\r\n");*/
-							}
-
-							velocityDiff = receiverNode.velocity - node[tmpNode].velocity;
-
-							if(velocityDiff < 0)
-								velocityDiff *= -1.0;
-
-							if(velocityDiff > thresholdGPS){
-								node[tmpNode].errorByte |= 0x04;
-								//SEND_SERIAL_MSG("GPS_DANGER\r\n");
-								//Error was measured - log it to sd card
-								if(((state&0x04) >> 2)){
-									SPI1_Busy = true;
-									appendTextToTheSD(stringOfMessurement, ' ',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-									SPI1_Busy = false;
-								}
-							}
-							else{
-								node[tmpNode].errorByte &= 0x03;
-								//If sd card is in use, log data to it
-								if(((state&0x04) >> 2)){
-										SPI1_Busy = true;
-										appendTextToTheSD(stringOfMessurement, ' ',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-										SPI1_Busy = false;
-									}
-							}
-							//after receiving gps measurement, ask module for last packets RSSI
-
-							askXbeeParam("DB",tmpNode+1);
-							break;
-
-						case GPS_COORD_CASE:
-
-							str_splitter(stringOfMessurement,receivedLat,receivedLon,"#");
-							if(gpsDataUpdated == true){
-								gps_parseGPGGA(gpsReceiveString,ts,lat,lon,fix,sats);
-								gpsDataUpdated = false;
-							}
-							askXbeeParam("DB",tmpNode+1);
-							break;
+						if(accDiff > thresholdACC){
+							node[tmpNode].errorByte |= 0x01;
+							//add sd card accelerometer error code
 						}
+						else{
+							node[tmpNode].errorByte &= 0x06;
+						}
+					}
+					if((node[tmpNode].state&0x02) == GPS_STATE_CASE){
+
+						node[tmpNode].velocity = stof(stringOfGPS);
+						if(gpsDataUpdated == true){
+							gpsDataUpdated = false;
+							receiverNode.velocity = stof(velocityString);
+						}
+						velocityDiff = receiverNode.velocity - node[tmpNode].velocity;
+
+						if(velocityDiff < 0)
+							velocityDiff *= -1.0;
+
+						if(velocityDiff > thresholdGPS){
+							node[tmpNode].errorByte |= 0x04;
+							//SEND_SERIAL_MSG("GPS_DANGER\r\n");
+							//Error was measured - log it to sd card
+						}
+						else{
+							node[tmpNode].errorByte &= 0x03;
+						}
+					}
+					if((node[tmpNode].state&0x04) == GPS_COORD_CASE){
+						/*
+						 * GPS_COORD case
+						 */
+						str_splitter(stringOfMessurement,receivedLat,receivedLon,"#");
+						if(gpsDataUpdated == true){
+							gps_parseGPGGA(gpsReceiveString,ts,lat,lon,fix,sats);
+							gpsDataUpdated = false;
+						}
+					}
+					/*
+					 * When comparision is done, ask for RSSI to complete error, alarm check
+					 */
+					askXbeeParam("DB",tmpNode+1);
+
 				}
 				else if(xbeeReceiveBuffer[i] == 'C'){
 
@@ -885,7 +901,7 @@ int main(void){
 						break;
 					case (0x09):
 						/*
-						 *GET_ABSREL_NODE
+						 *GET_ABSREL_NODE / GET_ABSREL_ALL
 						 */
 						if(xbeeReceiveBuffer[16] == '7'){
 							transferNode[0] = true;
@@ -1132,31 +1148,10 @@ int main(void){
 			}
     	}
 
-/*    	if(timerUpdated == true){
+    	/*
+    	 * Respond for timer error in 0x8E message
+    	 */
 
-
-    		 * We are not interested in checkin serial nodes timeout
-
-    		for(i = 0; i < NUMBER_OF_NODES-1; i++){
-    			if(node[i].packetTime == 0){
-    				continue;
-    			}
-    			timDiff = TIM_GetCounter(TIM2) - node[i].packetTime;
-    			if(timDiff > thresholdTIM){
-
-    				 * TIM_DNG
-
-    				node[i].packetTime = 0;
-					strcpy(&xbeeTransmitString[0],"C V#");
-					itoa(timDiff,stringOfMessurement,10);
-					xbeeTransmitString[4] = tmpNode + ASCII_DIGIT_OFFSET;
-					xbeeTransmitString[5] = '#';
-					strcpy(&xbeeTransmitString[6],stringOfMessurement);
-					transmitRequest(node[3].adressHigh, node[3].adressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-    			}
-    		}
-    		timerUpdated = false;
-    	}*/
     }
 }
 
@@ -1169,6 +1164,8 @@ void USART2_IRQHandler(void){
 		if((gpsReceiveString[gpsReadIterator++] = USART_ReceiveData(USART2)) == '\n'){
 			gpsDataUpdated = true;
 			gpsReadIterator = 0;
+			if(strncmp(gpsReceiveString,"$GPVTG" , 6) == 0)
+				gps_parseGPVTG(gpsReceiveString,velocityString);
 		}
 	}
 }

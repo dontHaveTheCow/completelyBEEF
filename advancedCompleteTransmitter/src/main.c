@@ -48,7 +48,7 @@
 #define GPS_COORD_CASE 0x02
 #define XBEE_DATA_MODE_OFFSET 12
 #define XBEE_DATA_TYPE_OFFSET 14
-#define TIMER_SYNC_DELAY 92 //92 ms for 10 byte packet
+#define TIMER_SYNC_DELAY 106
 
 #define COORDINATOR_ADDR_HIGH 0x0013A200
 #define COORDINATOR_ADDR_LOW 0x40E3E13A
@@ -76,6 +76,13 @@ uint8_t accBuffValue = 0;
 char gpsReceiveString[96];
 uint8_t gpsReadIterator;
 volatile bool gpsDataUpdated = false;
+/*
+ * Transmitting globals
+ */
+char xbeeTransmitString[64];
+char velocityString[6] = " ";
+char accString[6];
+uint8_t state = 0;
 
 int main(void){
 	/*
@@ -96,15 +103,13 @@ int main(void){
     char lond[2]= " ";
     char fix[2]= "0";
     char sats[3]= " ";
-    char velocityString[6] = " ";
     char *ptrToNMEA[] = {ts, lat, latd, lon, lond, fix, sats};
 	uint8_t messageIterator;
 	bool readingVelocity = true;
 	/*
 	 * Local variables for Accelerometer
 	 */
-	int16_t x = 0;
-	char messurementString[6];
+	//int16_t x = 0;
 	/*
 	 * Local variables for SD card
 	 */
@@ -118,12 +123,11 @@ int main(void){
 	/*
 	 * ADC, Timer and other loco's
 	 */
-	uint8_t state = 0;
 	uint8_t moduleStatus = MODULE_NOT_INITIALIZED;
 	uint16_t ADC_value;
 	uint8_t errorTimer = 40;
 	uint8_t timerWindow = 0xFF;
-	char timerString[16] = " ";
+	//char timerString[16] = " ";
 	char itoaConversionString[8];
 
 	/*
@@ -179,67 +183,6 @@ int main(void){
 
 		switch (moduleStatus) {
 		case MODULE_EXPERIMENT_MODE:
-			delayMs(300);
-			/*
-			 * Send Accelerometer data if chosen
-			 */
-			if(state&0x01){
-				x = (accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5;
-				itoa(x, messurementString, 10);
-				xbeeTransmitString[0] = 'M';
-				xbeeTransmitString[1] = ' ';
-				xbeeTransmitString[2] = '0';
-				xbeeTransmitString[3] = ' ';
-				strcpy(&xbeeTransmitString[4],&messurementString[0]);
-				transmitRequest(COORDINATOR_ADDR_HIGH, COORDINATOR_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-				/*
-				 * Log data to SD card if chosen
-				 */
-				if((state&0x04) >> 2){
-					itoa(globalCounter,timerString, 10);
-					appendTextToTheSD(timerString, '\t', &sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-					appendTextToTheSD(xbeeTransmitString, '\t', &sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-					xorGreenLed(2);
-				}
-				xorGreenLed(0);
-			}
-			delayMs(300);
-			/*
-			 * Send GPS data if chosen
-			 */
-			if((state&0x02) >> 1){
-				if(strncmp(gpsReceiveString,"$GPVTG" , 6) == 0){
-					gps_parseGPVTG(gpsReceiveString,velocityString);
-					xbeeTransmitString[0] = 'M';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = '1';
-					xbeeTransmitString[3] = ' ';
-					strcpy(&xbeeTransmitString[4],velocityString);
-					transmitRequest(COORDINATOR_ADDR_HIGH, COORDINATOR_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-				}
-				else if(strncmp(gpsReceiveString,"$GPGGA" , 6) == 0){
-					gps_parseGPGGA(gpsReceiveString,ts,lat,lon,fix,sats);
-					xbeeTransmitString[0] = 'M';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = '2';
-					xbeeTransmitString[3] = ' ';
-					strcpy(&xbeeTransmitString[4],lat);
-					strcat(xbeeTransmitString,"#");
-					strcat(xbeeTransmitString,lon);
-					transmitRequest(COORDINATOR_ADDR_HIGH, COORDINATOR_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-				}
-				else{
-					strcpy(velocityString,"999.9");
-				}
-				/*
-				 * Log data to SD card if chosen
-				 */
-				if((state&0x04) >> 2){
-					appendTextToTheSD(xbeeTransmitString, '\n', &sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-					xorGreenLed(2);
-				}
-				xorGreenLed(1);
-			}
 			break;
 
 		case MODULE_NOT_INITIALIZED:
@@ -256,9 +199,14 @@ int main(void){
     		if((state&0x02) >> 1){
     			hibernateGps();
     		}
+    		if(state&0x01){
+    			/*
+    			 * Stop acc
+    			 */
+    			TIM_Cmd(TIM14,DISABLE);
+    		}
     		state = 0;
     		moduleStatus = MODULE_NOT_INITIALIZED;
-
 			break;
 
 		case MODULE_INITIALIZING:
@@ -276,6 +224,15 @@ int main(void){
 				}
 				if(!errorTimer){
 					state &=~(0x01);
+
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x01; //acc not initialized error
+					xbeeTransmitString[5] = '\0';
+					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
 				}
 				else{
 					TIM_Cmd(TIM14,ENABLE);
@@ -330,9 +287,17 @@ int main(void){
 				}
 				//if not enough satellites are found, turn off gps
 				if(!errorTimer){
-					SEND_SERIAL_MSG("GPS timeout...\r\n");
 					hibernateGps();
 					state &= 0xFD;
+
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x02; //gps not initialized error
+					xbeeTransmitString[5] = '\0';
+					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
 				}
 				else{
 					//if satellites found -> turn on $GPVTG to monitor velocity
@@ -359,6 +324,15 @@ int main(void){
 				if(!errorTimer){
 					//If sd card doesnt turn on, dont log anything to it
 					state &= 0xFB;
+
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x03; //sd not initialized error
+					xbeeTransmitString[5] = '\0';
+					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
 				}
 				else{
 
@@ -393,7 +367,12 @@ int main(void){
 			xbeeTransmitString[5] = '\0';
 			transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
-			moduleStatus = 	MODULE_IDLE;
+			if(state == 0x00){
+				moduleStatus = 	MODULE_NOT_INITIALIZED;
+			}
+			else{
+				moduleStatus = 	MODULE_IDLE;
+			}
 			break;
 
 			case MODULE_IDLE:
@@ -485,7 +464,8 @@ int main(void){
 							/*
 							 * Start new timer interrupt based on window calculation
 							 */
-							TIM_SetCounter(TIM15,0);
+
+							TIM_SetCounter(TIM15,800 - (TIM_GetCounter(TIM2)+timerWindow*100)%800);
 							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
 							TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
 
@@ -500,6 +480,9 @@ int main(void){
 					case (0x11):
 						if(moduleStatus == MODULE_EXPERIMENT_MODE){
 							moduleStatus = MODULE_IDLE;
+
+							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+							TIM_ITConfig(TIM15, TIM_IT_Update, DISABLE);
 							/*
 							 * Positive response
 							 */
@@ -638,6 +621,8 @@ void USART2_IRQHandler(void){
 		if((gpsReceiveString[gpsReadIterator++] = USART_ReceiveData(USART2)) == '\n'){
 			gpsDataUpdated = true;
 			gpsReadIterator = 0;
+			if(strncmp(gpsReceiveString,"$GPVTG" , 6) == 0)
+				gps_parseGPVTG(gpsReceiveString,velocityString);
 		}
 	}
 }
@@ -679,8 +664,8 @@ void EXTI4_15_IRQHandler(void)					//External interrupt handlers
 }
 
 
-void TIM14_IRQHandler()
-{
+void TIM14_IRQHandler(){
+
 	if(TIM_GetITStatus(TIM14, TIM_IT_Update) != RESET)
 	{
 		TIM_ClearITPendingBit(TIM14, TIM_IT_Update);
@@ -691,16 +676,30 @@ void TIM14_IRQHandler()
 	}
 }
 
-void TIM15_IRQHandler()
-{
+void TIM15_IRQHandler(){
+
 	if(TIM_GetITStatus(TIM15, TIM_IT_Update) != RESET)
 	{
 		TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
-
 		/*
 		 * Transmit shit here
 		 */
-
+		xbeeTransmitString[0] = 'M';
+		xbeeTransmitString[1] = ' ';
+		xbeeTransmitString[2] = state;
+		xbeeTransmitString[3] = '\0';
+		if(state&0x01){
+			itoa((accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5, accString, 10);
+			strcat(xbeeTransmitString,"#");
+			strcat(xbeeTransmitString,&accString[0]);
+			xorGreenLed(0);
+		}
+		if((state&0x02) >> 1){
+			strcat(xbeeTransmitString,"#");
+			strcat(xbeeTransmitString,velocityString);
+			xorGreenLed(1);
+		}
+		transmitRequest(COORDINATOR_ADDR_HIGH, COORDINATOR_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 	}
 }
 

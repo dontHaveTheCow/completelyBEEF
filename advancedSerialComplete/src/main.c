@@ -238,9 +238,7 @@ int main(void)
 				xbeeApplyDwordParamter("CM",tmpmask,AT_FRAME_ID_APPLY);
 
 			}
-			else if(strcmp(key,"FIND_NEIGHBORS") == 0){
-				askXbeeParam("FN",AT_FRAME_ID_REQUEST);
-			}
+
 			else if(strcmp(key,"SYNC_TIME") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
@@ -735,7 +733,6 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#SET_POWER_SERIAL\r\n");
 				SEND_SERIAL_MSG("MSG#GET_CHANNELS_SERIAL\r\n");
 				SEND_SERIAL_MSG("MSG#SET_CHANNELS_SERIAL\r\n");
-				SEND_SERIAL_MSG("MSG#FIND_NEIGHBORS\r\n");
 				SEND_SERIAL_MSG("MSG#SET_EVENT#\r\n");
 				SEND_SERIAL_MSG("MSG#SET_EVENT_COORD\r\n");
 				SEND_SERIAL_MSG("MSG#SET_THRACC#\r\n");
@@ -845,6 +842,10 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#PRINT_TIM15\r\n");
 				SEND_SERIAL_MSG("MSG#START_TIM15\r\n");
 				SEND_SERIAL_MSG("MSG#STOP_TIM15\r\n");
+				SEND_SERIAL_MSG("MSG#FIND_NEIGHBORS\r\n");
+				SEND_SERIAL_MSG("MSG#NETWORK_DISCOVER\r\n");
+				SEND_SERIAL_MSG("MSG#SET_DISC_OPT#\r\n");
+				SEND_SERIAL_MSG("MSG#GET_DISC_OPT#\r\n");
 			}
 			else if(strcmp(key,"START_TEST_TIM2") == 0){
 				TIM_Cmd(TIM2,ENABLE);
@@ -881,6 +882,18 @@ int main(void)
 				TIM_ITConfig(TIM15, TIM_IT_Update, DISABLE);
 				SEND_SERIAL_MSG("Timer15 value ");
 				SEND_SERIAL_MSG("Timer15 disabled\r\n");
+			}
+			else if(strcmp(key,"FIND_NEIGHBORS") == 0){
+				askXbeeParam("FN",AT_FRAME_ID_REQUEST);
+			}
+			else if(strcmp(key,"NETWORK_DISCOVER") == 0){
+				askXbeeParam("ND",AT_FRAME_ID_REQUEST);
+			}
+			else if(strcmp(key,"SET_DISC_OPT") == 0){
+				xbeeApplyParamter("NO",atoi(value),AT_FRAME_ID_APPLY);
+			}
+			else if(strcmp(key,"GET_DISC_OPT") == 0){
+				askXbeeParam("NO",AT_FRAME_ID_REQUEST);
 			}
 			else{
 				// VERYWRONG DATA
@@ -929,7 +942,40 @@ int main(void)
 			if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
 
 				//FIND_NEIGHBORS
-				uint8_t counter = xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA];
+/*				uint8_t counter = 0;
+
+				while(counter++ < length){
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[counter]);
+				}*/
+				SEND_SERIAL_MSG("Address of a neighbor");
+				xbeeAddressHigh = (xbeeReceiveBuffer[XBEE_FN_ADDRESSH_INDEX] << 24)
+						+(xbeeReceiveBuffer[XBEE_FN_ADDRESSH_INDEX+1] << 16)
+						+(xbeeReceiveBuffer[XBEE_FN_ADDRESSH_INDEX+2] << 8)
+						+(xbeeReceiveBuffer[XBEE_FN_ADDRESSH_INDEX+3]);
+				itoa(xbeeAddressHigh,xbeeAddressHighString, 10);
+				SEND_SERIAL_MSG(xbeeAddressHighString);
+				SEND_SERIAL_MSG(" ");
+				xbeeAddressLow = (xbeeReceiveBuffer[XBEE_FN_ADDRESSL_INDEX] << 24)
+						+(xbeeReceiveBuffer[XBEE_FN_ADDRESSL_INDEX+1] << 16)
+						+(xbeeReceiveBuffer[XBEE_FN_ADDRESSL_INDEX+2] << 8)
+						+(xbeeReceiveBuffer[XBEE_FN_ADDRESSL_INDEX+3]);
+				itoa(xbeeAddressLow,xbeeAddressLowString, 10);
+				SEND_SERIAL_MSG(xbeeAddressLowString);
+				//xbeeReceiveBuffer[length-1] - RSSI value
+				SEND_SERIAL_MSG("\r\nRSSI of a neighbor");
+				SEND_SERIAL_BYTE(xbeeReceiveBuffer[length-1] / 10 + 0x30);
+				SEND_SERIAL_BYTE(xbeeReceiveBuffer[length-1] % 10 + 0x30);
+				SEND_SERIAL_MSG("\r\n");
+			}
+			else{
+				SEND_SERIAL_MSG("DEBUG#FN_AT_COMMAND_REQUEST_ERROR\r\n");
+			}
+		}else if(strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "ND", 2) == 0) {
+
+			if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+
+				//FIND_NEIGHBORS
+				uint8_t counter = 0;
 
 				while(counter++ < length){
 					SEND_SERIAL_BYTE(xbeeReceiveBuffer[counter]);
@@ -938,7 +984,7 @@ int main(void)
 				SEND_SERIAL_MSG("\r\n");
 			}
 			else{
-				SEND_SERIAL_MSG("DEBUG#FN_AT_COMMAND_REQUEST_ERROR\r\n");
+				SEND_SERIAL_MSG("DEBUG#ND_AT_COMMAND_REQUEST_ERROR\r\n");
 			}
 		}else if (strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "PL", 2) == 0) {
 			if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
@@ -957,6 +1003,25 @@ int main(void)
 
 				}else{
 					SEND_SERIAL_MSG("DEBUG#PL_AT_COMMAND_APPLY_ERROR\r\n");
+				}
+			}
+		}else if (strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "NO", 2) == 0) {
+			if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
+				if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+					SEND_SERIAL_MSG("DEBUG#NO_OPTIONS:");
+					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA]+ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_MSG("\r\n");
+
+				}else{
+					SEND_SERIAL_MSG("NO_AT_COMMAND_REQUEST_ERROR\r\n");
+				}
+			}else if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_APPLY){
+				if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+					SEND_SERIAL_MSG("DEBUG#NO_AT_COMMAND_APPLIED\r\n");
+					askXbeeParam("NO",AT_FRAME_ID_REQUEST);
+
+				}else{
+					SEND_SERIAL_MSG("DEBUG#NO_AT_COMMAND_APPLY_ERROR\r\n");
 				}
 			}
 		}else if (strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "CM", 2) == 0) {
@@ -1002,6 +1067,25 @@ int main(void)
 		}
 		break;
 		case XBEE_RECEIVE_PACKET:
+
+			receivedAddressHigh = 0x00;
+			receivedAddressLow = 0x00;
+
+			for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
+
+				if(iterator<5){
+					receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
+				}
+				else{
+					receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
+				}
+			}
+
+			for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
+				if(receivedAddressLow == node[niterator].addressLow )
+					tmpNode = niterator;
+			}
+
 			if(xbeeReceiveBuffer[XBEE_DATA_MODE_OFFSET] == 'M'){
 				/*
 				 * Serial node should not receive any measurements
@@ -1029,23 +1113,6 @@ int main(void)
 					break;
 				case (0x81):
 					//Command positive response
-					receivedAddressHigh = 0x00;
-					receivedAddressLow = 0x00;
-
-					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
-
-						if(iterator<5){
-							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
-						}
-						else{
-							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
-						}
-					}
-
-					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
-						if(receivedAddressLow == node[niterator].addressLow )
-							tmpNode = niterator;
-					}
 					SEND_SERIAL_MSG("MSG#");
 					SEND_SERIAL_MSG("CMD_ACCEPTED_NODE#");
 					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
@@ -1082,23 +1149,6 @@ int main(void)
 				case (0x87):
 					//Readiness response
 					//"C N#<state><\n>
-					receivedAddressHigh = 0x00;
-					receivedAddressLow = 0x00;
-
-					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
-
-						if(iterator<5){
-							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
-						}
-						else{
-							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
-						}
-					}
-
-					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
-						if(receivedAddressLow == node[niterator].addressLow )
-							tmpNode = niterator;
-					}
 					SEND_SERIAL_MSG("MSG#NODE#");
 					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
 					SEND_SERIAL_BYTE('#');
@@ -1111,7 +1161,12 @@ int main(void)
 					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 2)&0x01){
 						SEND_SERIAL_MSG("SD#");
 					}
-					SEND_SERIAL_MSG("READY\r\n");
+					if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x00){
+						SEND_SERIAL_MSG("NOT_INITIALIZED\r\n");
+					}
+					else{
+						SEND_SERIAL_MSG("IDLE_AND_READY\r\n");
+					}
 					break;
 				case (0x88):
 					//Transfered accelerometer and RSSI measurement
@@ -1227,23 +1282,6 @@ int main(void)
 					SEND_SERIAL_MSG("\r\n");
 				break;
 				case (0x8B):
-					receivedAddressHigh = 0x00;
-					receivedAddressLow = 0x00;
-
-					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
-
-						if(iterator<5){
-							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
-						}
-						else{
-							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
-						}
-					}
-
-					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
-						if(receivedAddressLow == node[niterator].addressLow )
-							tmpNode = niterator;
-					}
 					SEND_SERIAL_MSG("MSG#NODE#");
 					//id
 					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
@@ -1253,23 +1291,6 @@ int main(void)
 					SEND_SERIAL_MSG("\r\n");
 				break;
 				case (0x8C):
-					receivedAddressHigh = 0x00;
-					receivedAddressLow = 0x00;
-
-					for(iterator = 1; iterator < 9; iterator++){	//Read address from received packet
-
-						if(iterator<5){
-							receivedAddressHigh |= xbeeReceiveBuffer[iterator] << 8*(4-iterator);
-						}
-						else{
-							receivedAddressLow |= xbeeReceiveBuffer[iterator] << 8*(8-iterator);
-						}
-					}
-
-					for(niterator = 0; niterator < NUMBER_OF_NODES; niterator++){	//Find the matching node for the received address
-						if(receivedAddressLow == node[niterator].addressLow )
-							tmpNode = niterator;
-					}
 					tmpmask = atoi(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
 
 					SEND_SERIAL_MSG("MSG#NODE#");
@@ -1306,19 +1327,38 @@ int main(void)
 						SEND_SERIAL_MSG(tmpAccString);
 						SEND_SERIAL_MSG("\r\n");
 					}
-
 				break;
-				case (0x1C):
-
-					TIM_Cmd(TIM14,ENABLE);
-
-				break;
-				case ('V'):
+				case (0x8E):
 					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
 					SEND_SERIAL_BYTE('#');
 					SEND_SERIAL_MSG("TIM_DNG#");
 					SEND_SERIAL_MSG(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4]);
 					SEND_SERIAL_MSG("\r\n");
+				break;
+				case (0x8F):
+					SEND_SERIAL_BYTE(tmpNode + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE('#');
+					SEND_SERIAL_MSG("ERROR#");
+					if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x01){
+						/*
+						 * ACC_INIT_ERROR
+						 */
+						SEND_SERIAL_MSG("ACC_INIT");
+					}
+					else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x02){
+						/*
+						 * GPS_INIT_ERROR
+						 */
+						SEND_SERIAL_MSG("GPS_INIT");
+					}
+					else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x03){
+						/*
+						 * SD_INIT_ERROR
+						 */
+						SEND_SERIAL_MSG("SD_INIT#");
+					}
+					SEND_SERIAL_MSG("\r\n");
+
 				break;
 				default:
 					SEND_SERIAL_MSG("MSG#UNEXPECTED_XBEE_COMMAND...\r\n");
