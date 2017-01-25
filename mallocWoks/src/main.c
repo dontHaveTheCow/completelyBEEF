@@ -22,8 +22,9 @@ struct node{
 };
 
 struct node* list_createRoot(void);
-struct node* list_addNode(struct node* head);
-struct node* list_findNode(uint32_t addressL, struct node* curr, struct node* root);
+struct node* list_addNode(struct node** ptrToLast, uint32_t addressL);
+struct node* list_findNode(uint32_t addressL, struct node* curr,struct node* root);
+void list_printList(struct node* root);
 
 void list_setAddress(struct node* currNode, uint32_t high, uint32_t low);
 
@@ -35,28 +36,24 @@ int main(void)
 	initialiseSysTick();
 	Usart1_Init(BAUD_9600);
 
-	char txString[16];
-
-	Usart1_SendString("Size of a list element:");
-	Usart1_Send(sizeof(struct node) / 10 + 0x30);
-	Usart1_Send(sizeof(struct node) % 10 + 0x30);
-
 	struct node* rootNode = list_createRoot();
-	struct node* headNode = rootNode;
-	struct node* currNode = rootNode;
-	currNode = list_addNode(headNode);
+	struct node* lastNode = rootNode;
+	struct node* currNode;
 
-	Usart1_SendString("Root id:");
-	Usart1_Send(rootNode->id + 0x30);
-	Usart1_SendString("\r\nNext id:");
+	list_setAddress(rootNode, 0x0013A200, 0x409783D9);
+	list_addNode(&lastNode, 0x409783DA);
+	list_addNode(&lastNode, 0x409783DB);
+	currNode = list_addNode(&lastNode, 0x409783DC);
+	list_addNode(&lastNode, 0x409783DD);
+
+	Usart1_SendString("------printing list----------\r\n");
+	list_printList(rootNode);
+	Usart1_SendString("------searching node----------\r\n");
+	currNode = list_findNode(0x409783DF,currNode,rootNode);
+	Usart1_SendString("Node ");
 	Usart1_Send(currNode->id + 0x30);
+	Usart1_SendString(" with address:0x409783DB\r\n");
 
-	list_setAddress(currNode, 0x0013A200, 0x409783D9);
-	list_setAddress(rootNode, 0x0013A200, 0x40E3E13D);
-
-	Usart1_SendString("\r\nId of a address 0x409783D9:0x");
-	itoa(list_findNode(0x409783D9,currNode,rootNode)->id,txString,16);
-	Usart1_SendString(txString);
 
 	for(;;){
 		delay_400ms();
@@ -76,31 +73,31 @@ struct node* list_createRoot(void){
 	return ptrToRoot;
 }
 
-struct node* list_addNode(struct node* head){
+struct node* list_addNode(struct node** ptrToLast, uint32_t addressL){
 
-	if(head == NULL){
+	if(*ptrToLast == NULL){
 		return list_createRoot();
 	}
-	struct node* ptrToNext = (struct node*) malloc(sizeof(struct node));
 
-	if(ptrToNext == NULL){
+	(*ptrToLast)->nextNode = malloc(sizeof(struct node));
+
+	if((*ptrToLast)->nextNode == NULL){
 		return NULL;
 	}
-	ptrToNext->nextNode = NULL;
-	ptrToNext->id = head->id + 1;
 
-	head->nextNode = ptrToNext;
-	head = ptrToNext;
+	(*ptrToLast)->nextNode->addressLow = addressL;
+	(*ptrToLast)->nextNode->id = (*ptrToLast)->id+1;
+	(*ptrToLast)->nextNode->nextNode = NULL;
+	(*ptrToLast) = (*ptrToLast)->nextNode;
 
-	return head;
+	return (*ptrToLast);
 }
 
-struct node* list_findNode(uint32_t addressL, struct node* curr, struct node* root){
+struct node* list_findNode(uint32_t addressL, struct node* curr,struct node* root){
 
 	struct node* tmp = curr;
 
-	while(curr->nextNode != tmp){
-
+	do{
 		if(curr->addressLow == addressL){
 			return curr;
 		}
@@ -112,7 +109,25 @@ struct node* list_findNode(uint32_t addressL, struct node* curr, struct node* ro
 			curr = curr->nextNode;
 		}
 	}
+	while(curr != tmp);
+
 	return NULL;
+}
+
+void list_printList(struct node* root){
+
+	struct node* tmp = root;
+	char txString[16];
+
+	Usart1_SendString("Id\'s \t Address\r\n");
+	while(tmp != NULL){
+		Usart1_Send(tmp->id + 0x30);
+		Usart1_Send('\t');
+		itoa(tmp->addressLow,txString, 16);
+		Usart1_SendString(txString);
+		Usart1_SendString("\r\n");
+		tmp = tmp->nextNode;
+	}
 }
 
 
