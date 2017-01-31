@@ -24,6 +24,7 @@ struct node{
 
 struct node* list_createRoot(void);
 struct node* list_addNode(struct node** ptrToLast, uint32_t addressL);
+void list_clearNodes(struct node* root);
 void list_setAddress(struct node* currNode, uint32_t high, uint32_t low);
 
 struct node* list_findNodeByAdd(uint32_t addressL, struct node* curr,struct node* root);

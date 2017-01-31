@@ -39,8 +39,20 @@ struct node* list_addNode(struct node** ptrToLast, uint32_t addressL){
 	return (*ptrToLast);
 }
 
+void list_clearNodes(struct node* root){
 
+	struct node* tmp = root->nextNode;
+	struct node* del = root->nextNode;
 
+	while(tmp != NULL){
+
+		tmp = del->nextNode;
+		free(del);
+		del = tmp;
+	}
+
+	root->nextNode = NULL;
+}
 
 void list_setAddress(struct node* currNode, uint32_t high, uint32_t low){
 

@@ -35,6 +35,8 @@
 #define XBEE_AT_COMMAND_DATA 5
 #define AT_FRAME_ID_REQUEST 0x52
 #define AT_FRAME_ID_APPLY   0x50
+#define XBEE_FN_ADDRESSH_INDEX 7
+#define XBEE_FN_ADDRESSL_INDEX 11
 
 //debugging
 //#include "debug.h"
