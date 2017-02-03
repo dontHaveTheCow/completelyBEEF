@@ -31,6 +31,8 @@ struct node* list_findNodeByAdd(uint32_t addressL, struct node* curr,struct node
 struct node* list_findNodeById(uint8_t id, struct node* curr,struct node* root);
 
 void list_setTransferForAll(struct node* root, bool yesOrNo);
+uint8_t list_sortByRSSI(struct node* root);
+void list_swapNodes(struct node* a, struct node* b);
 //void list_printList(struct node* root);
 
 #endif /* DYNAMICNODE_H_ */

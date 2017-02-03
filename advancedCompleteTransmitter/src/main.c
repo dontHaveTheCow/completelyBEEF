@@ -50,10 +50,6 @@
 #define XBEE_DATA_TYPE_OFFSET 14
 #define TIMER_SYNC_DELAY 106
 
-#define COORDINATOR_ADDR_HIGH 0x0013A200
-#define COORDINATOR_ADDR_LOW 0x40E3E13A
-#define SERIAL_ADDR_HIGH 0x0013A200
-#define SERIAL_ADDR_LOW 0x40E32A94
 /*
  * XBEE globals
  */
@@ -61,6 +57,9 @@ char xbeeReceiveBuffer[255];
 volatile bool xbeeDataUpdated = false;
 volatile uint8_t length,errorTimer,cheksum;
 bool xbeeReading = false;
+
+uint32_t CoordAddrHigh = 0x0013A200;
+uint32_t CoordAddrLow = 0x40E3E13A;
 /*
  * Module globals
  */
@@ -89,7 +88,11 @@ int main(void){
 	 * Local variables for XBEE
 	 */
 	uint8_t typeOfFrame;
+	uint32_t SerialAddrHigh = 0x0013A200;
+	uint32_t SerialAddrLow = 0x40E32A94;
 
+	uint32_t receivedAddHigh = 0;
+	uint32_t receivedAddLow = 0;
 	char xbeeTransmitString[64];
 	/*
 	 * Local variables for GPS
@@ -127,6 +130,8 @@ int main(void){
 	uint16_t ADC_value;
 	uint8_t errorTimer = 40;
 	uint8_t timerWindow = 0xFF;
+	uint8_t nodesInNetwork = 0;
+	uint16_t transmitTimerValue = 0;
 	//char timerString[16] = " ";
 	char itoaConversionString[8];
 
@@ -231,8 +236,7 @@ int main(void){
 					xbeeTransmitString[3] = '#';
 					xbeeTransmitString[4] = 0x01; //acc not initialized error
 					xbeeTransmitString[5] = '\0';
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-
+					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 				}
 				else{
 					TIM_Cmd(TIM14,ENABLE);
@@ -296,7 +300,7 @@ int main(void){
 					xbeeTransmitString[3] = '#';
 					xbeeTransmitString[4] = 0x02; //gps not initialized error
 					xbeeTransmitString[5] = '\0';
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 				}
 				else{
@@ -331,7 +335,7 @@ int main(void){
 					xbeeTransmitString[3] = '#';
 					xbeeTransmitString[4] = 0x03; //sd not initialized error
 					xbeeTransmitString[5] = '\0';
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 				}
 				else{
@@ -354,7 +358,7 @@ int main(void){
 			 */
 			strcpy(&xbeeTransmitString[0],"C  \0");
 			xbeeTransmitString[2] = 0x01;
-			transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+			transmitRequest(CoordAddrHigh,CoordAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
 			/*
 			 * Send response to serial node about readiness
@@ -365,7 +369,7 @@ int main(void){
 			xbeeTransmitString[3] = '#';
 			xbeeTransmitString[4] = state;
 			xbeeTransmitString[5] = '\0';
-			transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 			if(state == 0x00){
 				moduleStatus = 	MODULE_NOT_INITIALIZED;
@@ -383,7 +387,6 @@ int main(void){
 			batteryIndicationStartup(ADC_value);
 			break;
 		}
-
 
     	if(xbeeDataUpdated == true){
     		typeOfFrame = xbeeReceiveBuffer[0];
@@ -409,7 +412,7 @@ int main(void){
 								xbeeTransmitString[4] = xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA];
 								xbeeTransmitString[5] = ' ';
 								xbeeTransmitString[6] = '\0';
-								transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+								transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
 
 							}else{
@@ -435,10 +438,28 @@ int main(void){
 			case RECIEVE_PACKET:
 				if(xbeeReceiveBuffer[XBEE_DATA_MODE_OFFSET] == 'C'){
 
+					receivedAddHigh = 0;
+					receivedAddLow = 0;
+
+					receivedAddHigh |= xbeeReceiveBuffer[1] << 24;
+					receivedAddHigh |= xbeeReceiveBuffer[2] << 16;
+					receivedAddHigh |= xbeeReceiveBuffer[3] << 8;
+					receivedAddHigh |= xbeeReceiveBuffer[4];
+
+					receivedAddLow |= xbeeReceiveBuffer[5] << 24;
+					receivedAddLow |= xbeeReceiveBuffer[6] << 16;
+					receivedAddLow |= xbeeReceiveBuffer[7] << 8;
+					receivedAddLow |= xbeeReceiveBuffer[8];
+
 					switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
 					case (0x80):
-						TIM_SetCounter(TIM2,atoi(&xbeeReceiveBuffer[18]) + TIMER_SYNC_DELAY);
-						timerWindow = xbeeReceiveBuffer[16];
+						timerWindow = xbeeReceiveBuffer[16] - 1;
+						nodesInNetwork = xbeeReceiveBuffer[18] - 2;
+						TIM_SetCounter(TIM2,atoi(&xbeeReceiveBuffer[20]) + TIMER_SYNC_DELAY);
+
+						/*
+						 * Send positive response to Gateway
+						 */
 
 						break;
 					case (0x0F):
@@ -454,7 +475,7 @@ int main(void){
 							 */
 							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						}
 						break;
 					case (0x10):
@@ -465,7 +486,12 @@ int main(void){
 							 * Start new timer interrupt based on window calculation
 							 */
 
-							TIM_SetCounter(TIM15,800 - (TIM_GetCounter(TIM2)+timerWindow*100)%800);
+							/*
+							 * Debug shit, checking how correct the formula is
+							 */
+
+							//transmitTimerValue = TIM_GetCounter(TIM2)%800 - (800/nodesInNetwork)*timerWindow;
+							TIM_SetCounter(TIM15,transmitTimerValue);
 							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
 							TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
 
@@ -474,7 +500,7 @@ int main(void){
 							 */
 							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						}
 						break;
 					case (0x11):
@@ -488,7 +514,7 @@ int main(void){
 							 */
 							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						}
 						break;
 					case (0x12):
@@ -499,7 +525,7 @@ int main(void){
 						 */
 						strcpy(&xbeeTransmitString[0],"C  \0");
 						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						}
 						break;
 					case (0x15):
@@ -514,7 +540,7 @@ int main(void){
 						xbeeTransmitString[2] = 0x86;
 						xbeeTransmitString[3] = ' ';
 						strcpy(&xbeeTransmitString[4],itoaConversionString);
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						break;
 					case (0x16):
 						/*
@@ -526,7 +552,7 @@ int main(void){
 						 */
 						strcpy(&xbeeTransmitString[0],"C  \0");
 						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						break;
 					case (0x17):
 						//GET POWER
@@ -542,6 +568,27 @@ int main(void){
 						/*
 						 * 0x8B used for response
 						 */
+						break;
+
+					case (0X1E):
+
+						CoordAddrHigh = receivedAddHigh;
+						CoordAddrLow = receivedAddLow;
+
+						SerialAddrLow = 0;
+
+						SerialAddrLow |= xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] << 24;
+						SerialAddrLow |= xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+3] << 16;
+						SerialAddrLow |= xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4] << 8;
+						SerialAddrLow |= xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+5];
+
+						/*
+						 * Positive response
+						 */
+						strcpy(&xbeeTransmitString[0],"C  \0");
+						xbeeTransmitString[2] = 0x81;
+						transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+
 						break;
 					default:
 						break;
@@ -699,7 +746,7 @@ void TIM15_IRQHandler(){
 			strcat(xbeeTransmitString,velocityString);
 			xorGreenLed(1);
 		}
-		transmitRequest(COORDINATOR_ADDR_HIGH, COORDINATOR_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+		transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 	}
 }
 

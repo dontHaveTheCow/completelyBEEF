@@ -111,6 +111,46 @@ void list_setTransferForAll(struct node* root, bool yesOrNo){
 	}
 }
 
+uint8_t list_sortByRSSI(struct node* root){
+
+	bool swapped;
+	struct node *ptr1 = root;
+	struct node *lptr = NULL;
+
+	if(ptr1 == NULL){
+		return 1;
+	}
+
+	do{
+		swapped = false;
+		ptr1 = root;
+
+		while(ptr1->nextNode != lptr){
+			if(ptr1->rssiMeasurment > ptr1->nextNode->rssiMeasurment){
+
+				list_swapNodes(ptr1,ptr1->nextNode);
+				swapped = true;
+			}
+			ptr1 = ptr1->nextNode;
+		}
+		lptr = ptr1;
+	}
+	while(swapped);
+	return 0;
+}
+
+void list_swapNodes(struct node* a, struct node* b){
+
+	uint32_t tmpAddress = a->addressLow;
+	uint8_t tmpRSSI = a->rssiMeasurment;
+
+	a->addressLow = b->addressLow;
+	a->rssiMeasurment = b->rssiMeasurment;
+
+	b->addressLow = tmpAddress;
+	b->rssiMeasurment = tmpRSSI;
+}
+
 /*void list_printList(struct node* root){
 
 	struct node* tmp = root;

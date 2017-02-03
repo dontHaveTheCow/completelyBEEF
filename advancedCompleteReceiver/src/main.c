@@ -92,16 +92,18 @@ int main(void){
 
 	struct node* CoordinatorNode = list_createRoot();
 	list_setAddress(CoordinatorNode,0x0013A200,0x40E3E13A);
-	CoordinatorNode->addressLow = 0x40E3E13A;
 	CoordinatorNode->state = 0;
 	CoordinatorNode->velocity = 0.1;
+	CoordinatorNode->rssiMeasurment = 0x14;
 
-	struct node* gatewayNode  = list_createRoot();
-	gatewayNode->addressLow = SERIAL_ADDR_LOW;
-	gatewayNode->addressHigh = SERIAL_ADDR_HIGH;
 	struct node* lastNode = CoordinatorNode;
 	struct node* currNode = lastNode;
 
+	list_addNode(&lastNode,SERIAL_ADDR_LOW);
+	lastNode->rssiMeasurment = 0x15;
+/*	list_addNode(&lastNode,0x409783D9);
+	list_addNode(&lastNode,0x409783DA);
+	list_addNode(&lastNode,0x40E3E13D);*/
 	/*
 	 * Local variables for XBEE
 	 */
@@ -442,7 +444,7 @@ int main(void){
 						}
 					}
 				}
-				else if(xbeeReceiveBuffer[2] == 'N' && xbeeReceiveBuffer[3] == 'O'){
+				else if (strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "NO", 2) == 0) {
 					if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
 						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
 							if(xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA] != 4){
@@ -455,19 +457,41 @@ int main(void){
 								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							}
 							else{
-								askXbeeParam("FN",AT_FRAME_ID_REQUEST);
+								/*
+								 * Send info to gateway that all nodes are found...
+								 */
+								xbeeTransmitString[0] = 'C';
+								xbeeTransmitString[1] = ' ';
+								xbeeTransmitString[2] = 0x92;
+								xbeeTransmitString[3] = '#';
+								if(lastNode != NULL){
+									xbeeTransmitString[4] = lastNode->id; //Node discovery error
+								}
+								else{
+									xbeeTransmitString[4] = 0x00; //Node discovery error
+								}
+								xbeeTransmitString[5] = '\0';
+								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							}
+						}else{
+							SEND_SERIAL_MSG("NO_AT_COMMAND_REQUEST_ERROR\r\n");
 						}
 					}else if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_APPLY){
 						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
-							//DEBUG#NO_AT_COMMAND_APPLIED
+							SEND_SERIAL_MSG("DEBUG#NO_AT_COMMAND_APPLIED\r\n");
 							askXbeeParam("NO",AT_FRAME_ID_REQUEST);
+
+						}else{
+							SEND_SERIAL_MSG("DEBUG#NO_AT_COMMAND_APPLY_ERROR\r\n");
 						}
 					}
 				}
 				else if(strncmp((char*)&xbeeReceiveBuffer[XBEE_AT_COMMAND_INDEX], "FN", 2) == 0) {
 
 					if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
+
+						receivedAddressHigh = 0;
+						receivedAddressLow = 0;
 
 						receivedAddressHigh = (xbeeReceiveBuffer[XBEE_FN_ADDRESSH_INDEX] << 24)
 								+(xbeeReceiveBuffer[XBEE_FN_ADDRESSH_INDEX+1] << 16)
@@ -482,7 +506,6 @@ int main(void){
 						if(receivedAddressLow != SERIAL_ADDR_LOW){
 
 							list_addNode(&lastNode,receivedAddressLow);
-							lastNode->rssiMeasurment = xbeeReceiveBuffer[length-1];
 
 							if(lastNode == NULL){
 								xbeeTransmitString[0] = 'C';
@@ -494,12 +517,22 @@ int main(void){
 								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							}
 							else{
+								lastNode->rssiMeasurment = xbeeReceiveBuffer[length-1];
+
 								xbeeTransmitString[0] = 'C';
 								xbeeTransmitString[1] = ' ';
 								xbeeTransmitString[2] = 0x90;
 								xbeeTransmitString[3] = '#';
-								xbeeTransmitString[4] = lastNode->id; //Inform gateway about found nodes id
-								xbeeTransmitString[5] = '\0';
+								xbeeTransmitString[4] = lastNode->id;
+								xbeeTransmitString[5] = '#';
+								xbeeTransmitString[6] = lastNode->rssiMeasurment;
+								xbeeTransmitString[7] = '#';
+								xbeeTransmitString[8] = lastNode->addressLow >> 24; //Inform gateway about found nodes id
+								xbeeTransmitString[9] = lastNode->addressLow >> 16;
+								xbeeTransmitString[10] = lastNode->addressLow >> 8;
+								xbeeTransmitString[11] = lastNode->addressLow;
+								xbeeTransmitString[12] = '\0';
+
 								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							}
 						}
@@ -676,6 +709,9 @@ int main(void){
 
 				i = 1;	//Remember that "Frame type" byte was the first one
 
+				receivedAddressHigh = 0;
+				receivedAddressLow = 0;
+
 				for(; i < 9; i++){	//Read address from received packet
 
 					if(i<5){
@@ -692,38 +728,25 @@ int main(void){
 				Usart1_SendString("Received address:");
 				Usart1_SendString(stringOfMessurement);
 				Usart1_SendString("\r\n");
-				itoa(SERIAL_ADDR_LOW,stringOfMessurement,16);
-				Usart1_SendString("Serial address:");
-				Usart1_SendString(stringOfMessurement);
-				Usart1_SendString("\r\n");
-
-				if(receivedAddressLow == SERIAL_ADDR_LOW){
-					//Address of a node is saved in nextNode pointer
-					//To not mess up list_findNodeByAdd() function
-					//Since gatewayNode is not part of the list
-					gatewayNode->nextNode = currNode;
-					currNode = gatewayNode;
+				if(currNode == NULL){
+					Usart1_SendString("currNode is NULL, giving a Coordinator reference...\r\n");
+					currNode = CoordinatorNode;
 				}
-				else{
-					//If gatewayNode was used last time, jump back into a list
-					if(currNode->addressLow == SERIAL_ADDR_LOW)
-						currNode = currNode->nextNode;
-					currNode = list_findNodeByAdd(receivedAddressLow,currNode,CoordinatorNode);
-					if(currNode == NULL){
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x8F;
-						xbeeTransmitString[3] = '#';
-						xbeeTransmitString[4] = 0x05; //Node discovery error
-						xbeeTransmitString[5] = '\0';
-						transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+				currNode = list_findNodeByAdd(receivedAddressLow,currNode,CoordinatorNode);
+				if(currNode == NULL){
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x8F;
+					xbeeTransmitString[3] = '#';
+					xbeeTransmitString[4] = 0x05; //Node discovery error
+					xbeeTransmitString[5] = '\0';
+					Usart1_SendString("list_findNodeByAdd() error...\r\n");
+					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
-						/*
-						 * This is kinda risky
-						 */
-						currNode = gatewayNode;
-					}
+					//Write garbage so that no packets are processed after error
+					xbeeReceiveBuffer[i+3] = 'E';
 				}
+
 				//After reading source address, comes 2 reserved bytes
 				i = i + 2;
 				//In this case comandStatus actually is receive options
@@ -826,12 +849,21 @@ int main(void){
 						GPIOB->ODR ^= (1 << (5+currNode->id));
 						itoa(TIM_GetCounter(TIM2),timerString,10);
 		    		    xbeeTransmitString[0] = 'C';
-		    		    xbeeTransmitString[1] = ' ';
+		    		    xbeeTransmitString[1] = '#';
 		    		    xbeeTransmitString[2] = 0x80;
-		    		    xbeeTransmitString[3] = ' ';
+		    		    xbeeTransmitString[3] = '#';
+		    		    /*
+		    		     * This is the place where nodes transmit window is given
+		    		     * Every node sends message every 800ms
+		    		     * So timer window is given by
+		    		     * (800 / <total number of nodes>)
+		    		     */
+
 		    		    xbeeTransmitString[4] = currNode->id; //dummy id
-		    		    xbeeTransmitString[5] = ' ';
-		    		    strcpy(&xbeeTransmitString[6],&timerString[0]);
+		    		    xbeeTransmitString[5] = '#';
+		    		    xbeeTransmitString[6] = lastNode->id;
+		    		    xbeeTransmitString[7] = '#';
+		    		    strcpy(&xbeeTransmitString[8],&timerString[0]);
 		    		    /*
 		    		     * Need to add time window
 		    		     */
@@ -958,6 +990,8 @@ int main(void){
 								xbeeTransmitString[4] = 0x04; //Node discovery error
 								xbeeTransmitString[5] = '\0';
 								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+								//Set currNode to other value than NULL
+								//Or set it to null right after packet is received
 							}
 							else{
 								currNode->transferToGateway = true;
@@ -1134,18 +1168,48 @@ int main(void){
 
 					case (0x1B):
 						//DISCOVER_NETWORK
-						list_clearNodes(CoordinatorNode);
-						lastNode = CoordinatorNode;
-						currNode = CoordinatorNode;
+						//Remember that Gateway and Coordinator are default nodes, that should not be deleted
+						list_clearNodes(CoordinatorNode->nextNode);
+						lastNode = CoordinatorNode->nextNode;
+						currNode = CoordinatorNode->nextNode;
 
 						xbeeApplyParamter("NO",0x04,AT_FRAME_ID_APPLY);
+						//NO_STATUS_WILL_BE_RECEIVED_AFTER_ALL_NODES_ARE_FOUND
+						askXbeeParam("FN",AT_FRAME_ID_REQUEST);
 						break;
 
 					case (0x1C):
 						//GET_NODE_LIST - RESPOND with 0x91
-						currNode = CoordinatorNode->nextNode;
 
-						do{
+						//Ignore 0 and 1 node, Coordinator and Gateway
+						if(list_sortByRSSI(CoordinatorNode) == 1){
+							//error while sorting
+							xbeeTransmitString[0] = 'C';
+							xbeeTransmitString[1] = ' ';
+							xbeeTransmitString[2] = 0x8F;
+							xbeeTransmitString[3] = '#';
+							xbeeTransmitString[4] = 0x06; //Node discovery error
+							xbeeTransmitString[5] = '\0';
+							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							break;
+						}
+						currNode = CoordinatorNode->nextNode->nextNode;
+
+						if(currNode == NULL){
+							currNode = CoordinatorNode;
+
+							xbeeTransmitString[0] = 'C';
+							xbeeTransmitString[1] = ' ';
+							xbeeTransmitString[2] = 0x8F;
+							xbeeTransmitString[3] = '#';
+							xbeeTransmitString[4] = 0x07; //No nodes found error
+							xbeeTransmitString[5] = '\0';
+							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
+							break;
+						}
+
+						while(currNode != NULL){
 							//Send every nodes address to gateway
 							xbeeTransmitString[0] = 'C';
 							xbeeTransmitString[1] = ' ';
@@ -1166,7 +1230,45 @@ int main(void){
 							 */
 							delayMs(100);
 						}
-						while(currNode != NULL);
+						currNode = CoordinatorNode;
+						break;
+
+					case (0x1D):
+						//COORD_NODE_SYNC
+						currNode = CoordinatorNode->nextNode->nextNode;
+
+						if(currNode == NULL){
+							currNode = CoordinatorNode;
+
+							xbeeTransmitString[0] = 'C';
+							xbeeTransmitString[1] = ' ';
+							xbeeTransmitString[2] = 0x8F;
+							xbeeTransmitString[3] = '#';
+							xbeeTransmitString[4] = 0x07; //No nodes found error
+							xbeeTransmitString[5] = '\0';
+							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							break;
+						}
+						strcpy(&xbeeTransmitString[0],"C  \0");
+						xbeeTransmitString[2] = 0x1E;
+						xbeeTransmitString[3] = '#';
+						xbeeTransmitString[4] = SERIAL_ADDR_LOW >> 24;
+						xbeeTransmitString[5] = SERIAL_ADDR_LOW >> 16;
+						xbeeTransmitString[6] = SERIAL_ADDR_LOW >> 8;
+						xbeeTransmitString[7] = SERIAL_ADDR_LOW;
+						xbeeTransmitString[8] = '\0';
+
+						while(currNode != NULL){
+
+							transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							delayMs(100);
+							currNode = currNode->nextNode;
+						}
+						currNode = CoordinatorNode;
+
+						strcpy(&xbeeTransmitString[0],"C  \0");
+						xbeeTransmitString[2] = 0x81;
+						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						break;
 					default:
 						break;
