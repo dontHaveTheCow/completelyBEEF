@@ -79,6 +79,14 @@ volatile bool gpsDataUpdated = false;
  * Transmitting globals
  */
 char xbeeTransmitString[64];
+char ts[11] = " ";
+char lat[11] = " ";
+char latd[2]= " ";
+char lon[11]= " ";
+char lond[2]= " ";
+char fix[2]= "0";
+char sats[3]= " ";
+char *ptrToNMEA[] = {ts, lat, latd, lon, lond, fix, sats};
 char velocityString[6] = " ";
 char accString[6];
 uint8_t state = 0;
@@ -99,14 +107,6 @@ int main(void){
 	 */
 	char* ptr;
 	char* tmpPtr;
-    char ts[11] = " ";
-    char lat[11] = " ";
-    char latd[2]= " ";
-    char lon[11]= " ";
-    char lond[2]= " ";
-    char fix[2]= "0";
-    char sats[3]= " ";
-    char *ptrToNMEA[] = {ts, lat, latd, lon, lond, fix, sats};
 	uint8_t messageIterator;
 	bool readingVelocity = true;
 	/*
@@ -131,7 +131,8 @@ int main(void){
 	uint8_t errorTimer = 40;
 	uint8_t timerWindow = 0xFF;
 	uint8_t nodesInNetwork = 0;
-	uint16_t transmitTimerValue = 0;
+	int16_t transmitTimerValue = 0;
+	char timerString[16];
 	//char timerString[16] = " ";
 	char itoaConversionString[8];
 
@@ -146,6 +147,7 @@ int main(void){
 	/*
 	 * Initializing peripherals
 	 */
+	Usart1_Init(BAUD_9600);
 	Usart2_Init(BAUD_4800);
 	ConfigureUsart2Interrupt();
 	//used for delayMs()
@@ -292,7 +294,7 @@ int main(void){
 				//if not enough satellites are found, turn off gps
 				if(!errorTimer){
 					hibernateGps();
-					state &= 0xFD;
+					state &= 0xF5;//11110101
 
 					xbeeTransmitString[0] = 'C';
 					xbeeTransmitString[1] = ' ';
@@ -311,6 +313,10 @@ int main(void){
 						delayMs(400);
 						blinkRedLed2();
 						gps_dissableMessage($GPGGA);
+					}
+					else{
+						state |= 0x08;
+						state &=~ 0x02;
 					}
 					SEND_SERIAL_MSG("SATs found...\r\n");
 				}
@@ -453,14 +459,22 @@ int main(void){
 
 					switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
 					case (0x80):
-						timerWindow = xbeeReceiveBuffer[16] - 1;
-						nodesInNetwork = xbeeReceiveBuffer[18] - 2;
+						timerWindow = xbeeReceiveBuffer[16] - 2;
+						itoa(timerWindow,timerString,10);
+						Usart1_SendString(timerString);
+						Usart1_SendString("\r\n");
+						nodesInNetwork = xbeeReceiveBuffer[18] - 1;
+						itoa(nodesInNetwork,timerString,10);
+						Usart1_SendString(timerString);
+						Usart1_SendString("\r\n");
 						TIM_SetCounter(TIM2,atoi(&xbeeReceiveBuffer[20]) + TIMER_SYNC_DELAY);
+						itoa(TIM_GetCounter(TIM2),timerString,10);
+						Usart1_SendString(timerString);
+						Usart1_SendString("\r\n");
 
 						/*
 						 * Send positive response to Gateway
 						 */
-
 						break;
 					case (0x0F):
 						/*
@@ -485,12 +499,20 @@ int main(void){
 							/*
 							 * Start new timer interrupt based on window calculation
 							 */
+							itoa(TIM_GetCounter(TIM2),timerString,10);
+							Usart1_SendString(timerString);
+							Usart1_SendString("\r\n");
 
-							/*
-							 * Debug shit, checking how correct the formula is
-							 */
+							transmitTimerValue = TIM_GetCounter(TIM2)%800 - (800/nodesInNetwork)*timerWindow;
+							itoa(transmitTimerValue,timerString,10);
+							Usart1_SendString(timerString);
+							Usart1_SendString("\r\n");
 
-							//transmitTimerValue = TIM_GetCounter(TIM2)%800 - (800/nodesInNetwork)*timerWindow;
+							if(transmitTimerValue < 0)
+								transmitTimerValue = 800 + transmitTimerValue;
+							itoa(transmitTimerValue,timerString,10);
+							Usart1_SendString(timerString);
+							Usart1_SendString("\r\n");
 							TIM_SetCounter(TIM15,transmitTimerValue);
 							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
 							TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
@@ -590,6 +612,16 @@ int main(void){
 						transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
 						break;
+					case (0x1F):
+						/*
+						 * PRINT_TIME_NODE
+						 */
+						globalCounter = TIM_GetCounter(TIM2);
+						itoa(globalCounter,timerString,10);
+						Usart1_SendString(timerString);
+						Usart1_SendString("\r\n");
+
+						break;
 					default:
 						break;
 					}
@@ -668,8 +700,12 @@ void USART2_IRQHandler(void){
 		if((gpsReceiveString[gpsReadIterator++] = USART_ReceiveData(USART2)) == '\n'){
 			gpsDataUpdated = true;
 			gpsReadIterator = 0;
-			if(strncmp(gpsReceiveString,"$GPVTG" , 6) == 0)
+			if(strncmp(gpsReceiveString,"$GPVTG" , 6) == 0){
 				gps_parseGPVTG(gpsReceiveString,velocityString);
+			}
+			else if(strncmp(gpsReceiveString,"$GPGGA" , 6) == 0){
+				gps_parseGPGGA(gpsReceiveString,ts,lat,lon,fix,sats);
+			}
 		}
 	}
 }
@@ -745,6 +781,13 @@ void TIM15_IRQHandler(){
 			strcat(xbeeTransmitString,"#");
 			strcat(xbeeTransmitString,velocityString);
 			xorGreenLed(1);
+		}
+		if((state&0x08) >> 1){
+			strcat(xbeeTransmitString,"#");
+			strcat(xbeeTransmitString,lat);
+			strcat(xbeeTransmitString,"#");
+			strcat(xbeeTransmitString,lon);
+			xorGreenLed(2);
 		}
 		transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 	}

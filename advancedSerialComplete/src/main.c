@@ -735,7 +735,7 @@ int main(void)
 				xbeeTransmitString[2] = 0x15;
 				transmitRequest(COORDINATOR_ADDR_HIGH,COORDINATOR_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 			}
-			else if(strcmp(key,"GET_GPSCOORD_ALL") == 0){
+			else if(strcmp(key,"SET_GPSCOORD_ALL") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
 				xbeeTransmitString[2] = 0x16;
@@ -749,7 +749,7 @@ int main(void)
 				currNode = CoordinatorNode;
 				SEND_SERIAL_MSG("DEBUG#PACKETS#SENT...\r\n");
 			}
-			else if(strcmp(key,"GET_GPSCOORD_NODE") == 0){
+			else if(strcmp(key,"SET_GPSCOORD_NODE") == 0){
 
 				strcpy(&xbeeTransmitString[0],"C  \0");
 				xbeeTransmitString[2] = 0x16;
@@ -904,8 +904,8 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#INIT_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#STOP_ALL\r\n");
 				SEND_SERIAL_MSG("MSG#STOP_NODE\r\n");
-				SEND_SERIAL_MSG("MSG#GET_GPSCOORD_ALL\r\n");
-				SEND_SERIAL_MSG("MSG#GET_GPSCOORD_NODE#\r\n");
+				SEND_SERIAL_MSG("MSG#SET_GPSCOORD_ALL\r\n");
+				SEND_SERIAL_MSG("MSG#SET_GPSCOORD_NODE#\r\n");
 				SEND_SERIAL_MSG("MSG#GET_POWER#\r\n");
 				SEND_SERIAL_MSG("MSG#SET_POWER#<id>#<>\r\n");
 				SEND_SERIAL_MSG("MSG#GET_CHANNELS\r\n");
@@ -993,6 +993,7 @@ int main(void)
 				SEND_SERIAL_MSG("MSG#SET_DISC_OPT#<4 for rssi>\r\n");
 				SEND_SERIAL_MSG("MSG#GET_DISC_OPT#\r\n");
 				SEND_SERIAL_MSG("MSG#PRINT_NODE_LIST#\r\n");
+				SEND_SERIAL_MSG("MSG#PRINT_TIME_NODE#\r\n");
 			}
 			else if(strcmp(key,"START_TEST_TIM2") == 0){
 				TIM_Cmd(TIM2,ENABLE);
@@ -1131,6 +1132,21 @@ int main(void)
 
 					currNode = currNode -> nextNode;
 				}while(currNode != NULL);
+			}
+			else if(strcmp(key,"PRINT_TIME_NODE") == 0){
+
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x1F;
+				xbeeTransmitString[3] = '\0';
+				currNode = list_findNodeById(atoi(value), currNode, CoordinatorNode);
+				if(currNode == NULL){
+					SEND_SERIAL_MSG("list_findNodeById error \r\n");
+					currNode = CoordinatorNode;
+				}
+				else{
+					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				}
 			}
 			else{
 				// VERYWRONG DATA
@@ -1654,13 +1670,12 @@ int main(void)
 					SEND_SERIAL_MSG("\r\n");
 				break;
 				case (0x90):
-					SEND_SERIAL_MSG("MSG#");
 					SEND_SERIAL_BYTE((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] / 10) + 0x30);
 					SEND_SERIAL_BYTE((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] % 10) + 0x30);
-					SEND_SERIAL_BYTE('#');
+					SEND_SERIAL_MSG("#DISC#");
 					SEND_SERIAL_BYTE((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4] / 10) + 0x30);
 					SEND_SERIAL_BYTE((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4] % 10) + 0x30);
-					SEND_SERIAL_MSG("#node#");
+					SEND_SERIAL_BYTE('#');
 					xbeeAddressLow = 0;
 					xbeeAddressLow = (xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+6] << 24)
 							+(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+7] << 16)
@@ -1668,7 +1683,8 @@ int main(void)
 							+(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+9]);
 					itoa(xbeeAddressLow,xbeeAddressLowString, 16);
 					SEND_SERIAL_MSG(xbeeAddressLowString);
-					SEND_SERIAL_MSG("#found\r\n");
+					SEND_SERIAL_BYTE('\r');
+					SEND_SERIAL_BYTE('\n');
 
 					nodesFound = xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2];
 
@@ -1697,14 +1713,14 @@ int main(void)
 					}
 					else if(currNode->id == nodesFound)  {
 						//If all nodes are added, print list
-						SEND_SERIAL_MSG("MSG#Id\tAddress\r\n");
+						SEND_SERIAL_MSG("MSG#Id#Address\r\n");
 						currNode = CoordinatorNode;
 
 						do{
-							SEND_SERIAL_MSG("MSG#");
 							SEND_SERIAL_BYTE(currNode->id / 10 + 0x30);
 							SEND_SERIAL_BYTE(currNode->id % 10 + 0x30);
-							SEND_SERIAL_BYTE('\t');
+							SEND_SERIAL_BYTE('#');
+							SEND_SERIAL_MSG("ADDR#");
 							itoa(currNode->addressLow,xbeeAddressLowString, 16);
 							SEND_SERIAL_MSG(xbeeAddressLowString);
 							SEND_SERIAL_MSG("\r\n");

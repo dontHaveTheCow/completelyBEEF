@@ -49,7 +49,7 @@
 #define ACC_STATE_CASE 0x01
 #define GPS_STATE_CASE 0x02
 #define ACCGPS_STATE_CASE 0x03
-#define GPS_COORD_CASE 0x04
+#define GPS_COORD_CASE 0x08
 #define XBEE_DATA_MODE_OFFSET 12
 #define XBEE_DATA_TYPE_OFFSET 14
 
@@ -823,11 +823,11 @@ int main(void){
 							currNode->errorByte &= 0x03;
 						}
 					}
-					if((currNode->state&0x04) == GPS_COORD_CASE){
+					if((currNode->state&0x08) == GPS_COORD_CASE){
 						/*
 						 * GPS_COORD case
 						 */
-						str_splitter(stringOfMessurement,receivedLat,receivedLon,"#");
+						str_splitter(&xbeeReceiveBuffer[i+1],receivedLat,receivedLon,"#");
 						if(gpsDataUpdated == true){
 							gps_parseGPGGA(gpsReceiveString,ts,lat,lon,fix,sats);
 							gpsDataUpdated = false;
