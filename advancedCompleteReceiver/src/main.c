@@ -57,7 +57,7 @@
 #define ACC_BUFFER_SIZE 20
 
 #define SERIAL_ADDR_HIGH 0x0013A200
-#define SERIAL_ADDR_LOW 0x40E32A94
+#define SERIAL_ADDR_LOW 0x40E3E13C
 /*
  * XBEE globals
  */
@@ -65,6 +65,7 @@ char xbeeReceiveBuffer[255];
 volatile bool xbeeDataUpdated = false;
 volatile uint8_t length,errorTimer,cheksum;
 bool xbeeReading = false;
+char xbeeGlobalBuffer[16];
 /*
  * Module globals
  */
@@ -239,6 +240,17 @@ int main(void){
 	    		state = 0;
 	    		moduleStatus = MODULE_NOT_INITIALIZED;
 
+				/*
+				 * Send response to serial node about readiness
+				 */
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x87;
+				xbeeTransmitString[3] = '#';
+				xbeeTransmitString[4] = state;
+				xbeeTransmitString[5] = '\0';
+				transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
 				break;
 			case MODULE_INITIALIZING:
 
@@ -378,7 +390,6 @@ int main(void){
 					appendTextToTheSD("\nNEW LOG", '\n', &sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
 				}
 			}
-
 			/*
 			 * Send response to serial node about readiness
 			 */
@@ -390,7 +401,13 @@ int main(void){
 			xbeeTransmitString[5] = '\0';
 			transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
-			moduleStatus = 	MODULE_IDLE;
+			if(state == 0x00){
+				moduleStatus = 	MODULE_NOT_INITIALIZED;
+			}
+			else{
+				moduleStatus = 	MODULE_IDLE;
+			}
+
 			break;
 
 			case MODULE_IDLE:
@@ -506,6 +523,7 @@ int main(void){
 						if(receivedAddressLow != SERIAL_ADDR_LOW){
 
 							list_addNode(&lastNode,receivedAddressLow);
+							lastNode->transferToGateway = true;
 
 							if(lastNode == NULL){
 								xbeeTransmitString[0] = 'C';
@@ -712,6 +730,9 @@ int main(void){
 				receivedAddressHigh = 0;
 				receivedAddressLow = 0;
 
+				/*
+				 * Only the lowest part of the address differs
+				 */
 				for(; i < 9; i++){	//Read address from received packet
 
 					if(i<5){
@@ -721,13 +742,7 @@ int main(void){
 						receivedAddressLow |= xbeeReceiveBuffer[i] << 8*(8-i);
 					}
 				}
-				/*
-				 * Only the lowest part of the address differs
-				 */
-				itoa(receivedAddressLow,stringOfMessurement,16);
-				Usart1_SendString("Received address:");
-				Usart1_SendString(stringOfMessurement);
-				Usart1_SendString("\r\n");
+
 				if(currNode == NULL){
 					Usart1_SendString("currNode is NULL, giving a Coordinator reference...\r\n");
 					currNode = CoordinatorNode;
@@ -745,6 +760,18 @@ int main(void){
 
 					//Write garbage so that no packets are processed after error
 					xbeeReceiveBuffer[i+3] = 'E';
+				}
+
+				/*
+				 * Timeout error setup
+				 * Clear timer
+				 * Clear interrupt
+				 * Enable interrupt
+				 */
+				if(currNode == lastNode){
+					TIM_SetCounter(TIM15,0);
+					TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+					TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
 				}
 
 				//After reading source address, comes 2 reserved bytes
@@ -1068,20 +1095,21 @@ int main(void){
 							/*
 							 * Positive response
 							 */
-							strcpy(&xbeeTransmitString[0],"C  \0");
-							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							/*
+							 * Send response to serial node about readiness
+							 */
+							xbeeTransmitString[0] = 'C';
+							xbeeTransmitString[1] = ' ';
+							xbeeTransmitString[2] = 0x87;
+							xbeeTransmitString[3] = '#';
+							xbeeTransmitString[4] = state;
+							xbeeTransmitString[5] = '\0';
+							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						}
 						break;
 					case (0x12):
 						if(moduleStatus == MODULE_IDLE){
 						moduleStatus = MODULE_SAFE_TURNOFF;
-						/*
-						 * Positive response
-						 */
-						strcpy(&xbeeTransmitString[0],"C  \0");
-						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						}
 						break;
 					case (0x13):
@@ -1345,9 +1373,7 @@ int main(void){
 			}
     	}
 
-    	/*
-    	 * Respond for timer error in 0x8E message
-    	 */
+
 
     }
 }
@@ -1403,16 +1429,6 @@ void EXTI4_15_IRQHandler(void)					//External interrupt handlers
 	}
 }
 
-/*void TIM2_IRQHandler()
-{
-	if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET)
-	{
-		TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-		globalCounter++;
-		timerUpdated = true;
-	}
-}*/
-
 void TIM14_IRQHandler()
 {
 	if(TIM_GetITStatus(TIM14, TIM_IT_Update) != RESET)
@@ -1424,7 +1440,26 @@ void TIM14_IRQHandler()
 			accBufferFull = true;
 			accBuffValue = 0;
 		}
+	}
+}
 
+void TIM15_IRQHandler(){
+
+	if(TIM_GetITStatus(TIM15, TIM_IT_Update) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+    	/*
+    	 * Respond for timer error in 0x8E message
+    	 */
+		xbeeGlobalBuffer[0] = 'C';
+		xbeeGlobalBuffer[1] = ' ';
+		xbeeGlobalBuffer[2] = 0x8E;
+		xbeeGlobalBuffer[3] = '\0';
+		transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeGlobalBuffer);
+		/*
+		 * Turn off interrupt, set to defaults
+		 */
+		TIM_ITConfig(TIM15, TIM_IT_Update, DISABLE);
 	}
 }
 

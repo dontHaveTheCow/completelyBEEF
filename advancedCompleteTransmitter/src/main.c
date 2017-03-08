@@ -97,7 +97,7 @@ int main(void){
 	 */
 	uint8_t typeOfFrame;
 	uint32_t SerialAddrHigh = 0x0013A200;
-	uint32_t SerialAddrLow = 0x40E32A94;
+	uint32_t SerialAddrLow = 0x40E3E13C;
 
 	uint32_t receivedAddHigh = 0;
 	uint32_t receivedAddLow = 0;
@@ -214,6 +214,15 @@ int main(void){
     		}
     		state = 0;
     		moduleStatus = MODULE_NOT_INITIALIZED;
+
+			xbeeTransmitString[0] = 'C';
+			xbeeTransmitString[1] = ' ';
+			xbeeTransmitString[2] = 0x87;
+			xbeeTransmitString[3] = '#';
+			xbeeTransmitString[4] = state;
+			xbeeTransmitString[5] = '\0';
+			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
 			break;
 
 		case MODULE_INITIALIZING:
@@ -532,22 +541,30 @@ int main(void){
 							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
 							TIM_ITConfig(TIM15, TIM_IT_Update, DISABLE);
 							/*
-							 * Positive response
+							 * Send response to serial node about readiness
 							 */
-							strcpy(&xbeeTransmitString[0],"C  \0");
-							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							xbeeTransmitString[0] = 'C';
+							xbeeTransmitString[1] = ' ';
+							xbeeTransmitString[2] = 0x87;
+							xbeeTransmitString[3] = '#';
+							xbeeTransmitString[4] = state;
+							xbeeTransmitString[5] = '\0';
+							transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						}
 						break;
 					case (0x12):
 						if(moduleStatus == MODULE_IDLE){
 						moduleStatus = MODULE_NOT_INITIALIZED;
 						/*
-						 * Positive response
+						 * Send response to serial node about readiness
 						 */
-						strcpy(&xbeeTransmitString[0],"C  \0");
-						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						xbeeTransmitString[0] = 'C';
+						xbeeTransmitString[1] = ' ';
+						xbeeTransmitString[2] = 0x87;
+						xbeeTransmitString[3] = '#';
+						xbeeTransmitString[4] = state;
+						xbeeTransmitString[5] = '\0';
+						transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						}
 						break;
 					case (0x15):
