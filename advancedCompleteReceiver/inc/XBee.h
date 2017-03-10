@@ -24,6 +24,7 @@
 #define ASCII_DIGIT_OFFSET 0x30
 
 #define TRANSOPT_DISACK 0x00
+#define TRANSOPT_PTMPT 0x40
 #define TRANSOPT_DIGIMESH 0xC0
 
 // Defines for xbee FRAME_ID

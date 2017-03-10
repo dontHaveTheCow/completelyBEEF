@@ -49,7 +49,6 @@
 #define XBEE_DATA_MODE_OFFSET 12
 #define XBEE_DATA_TYPE_OFFSET 14
 #define TIMER_SYNC_DELAY 106
-
 /*
  * XBEE globals
  */
@@ -384,7 +383,7 @@ int main(void){
 			xbeeTransmitString[3] = '#';
 			xbeeTransmitString[4] = state;
 			xbeeTransmitString[5] = '\0';
-			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_PTMPT, 0x00, xbeeTransmitString);
 
 			if(state == 0x00){
 				moduleStatus = 	MODULE_NOT_INITIALIZED;
@@ -496,9 +495,9 @@ int main(void){
 							/*
 							 * Positive response
 							 */
-							strcpy(&xbeeTransmitString[0],"C  \0");
+/*							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);*/
 						}
 						break;
 					case (0x10):
@@ -522,7 +521,8 @@ int main(void){
 							itoa(transmitTimerValue,timerString,10);
 							Usart1_SendString(timerString);
 							Usart1_SendString("\r\n");
-							TIM_SetCounter(TIM15,transmitTimerValue);
+							//TIM_SetCounter(TIM15,transmitTimerValue);
+							TIM_SetCounter(TIM15,0x00);
 							TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
 							TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
 
@@ -554,17 +554,8 @@ int main(void){
 						break;
 					case (0x12):
 						if(moduleStatus == MODULE_IDLE){
-						moduleStatus = MODULE_NOT_INITIALIZED;
-						/*
-						 * Send response to serial node about readiness
-						 */
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x87;
-						xbeeTransmitString[3] = '#';
-						xbeeTransmitString[4] = state;
-						xbeeTransmitString[5] = '\0';
-						transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+						//NODE_STOP
+						moduleStatus = MODULE_SAFE_TURNOFF;
 						}
 						break;
 					case (0x15):

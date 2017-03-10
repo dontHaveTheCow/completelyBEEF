@@ -165,7 +165,7 @@ void transmitRequest(uint32_t adrHigh, uint32_t adrLow, uint8_t transmitOption, 
 	cheksum += 0xFE;
 	SPI1_TransRecieve(0x00);	//Broadcast radius
 	cheksum += 0x00;
-	SPI1_TransRecieve(0x00);	//Transmit options (Disable ack)
+	SPI1_TransRecieve(transmitOption);	//Transmit options (Disable ack)
 	cheksum += 0x00;
 	for(; i < lenghtOfData; i++){	//RF data
 		SPI1_TransRecieve(data[i]);
