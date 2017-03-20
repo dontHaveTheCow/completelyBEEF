@@ -67,6 +67,7 @@ bool SPI1_Busy = false;
 uint32_t globalCounter = 0;
 bool timerUpdated = false;
 int16_t accBuff[5];
+int16_t accOffset = 0;
 uint8_t accBuffValue = 0;
 /*
  * GPS globals
@@ -249,6 +250,17 @@ int main(void){
 					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 				}
 				else{
+
+					accOffset = returnX_axis();
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+
 					TIM_Cmd(TIM14,ENABLE);
 				}
 			}
@@ -374,16 +386,17 @@ int main(void){
 			xbeeTransmitString[2] = 0x01;
 			transmitRequest(CoordAddrHigh,CoordAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
+			delayMs(100);
 			/*
 			 * Send response to serial node about readiness
 			 */
 			xbeeTransmitString[0] = 'C';
-			xbeeTransmitString[1] = ' ';
+			xbeeTransmitString[1] = '#';
 			xbeeTransmitString[2] = 0x87;
 			xbeeTransmitString[3] = '#';
 			xbeeTransmitString[4] = state;
 			xbeeTransmitString[5] = '\0';
-			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_PTMPT, 0x00, xbeeTransmitString);
+			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 			if(state == 0x00){
 				moduleStatus = 	MODULE_NOT_INITIALIZED;
@@ -780,7 +793,7 @@ void TIM15_IRQHandler(){
 		xbeeTransmitString[2] = state;
 		xbeeTransmitString[3] = '\0';
 		if(state&0x01){
-			itoa((accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5, accString, 10);
+			itoa((accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5 - accOffset, accString, 10);
 			strcat(xbeeTransmitString,"#");
 			strcat(xbeeTransmitString,&accString[0]);
 			xorGreenLed(0);

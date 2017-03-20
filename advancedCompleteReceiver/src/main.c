@@ -23,6 +23,7 @@
 #include "A2035H.h"
 #include "sdCard.h"
 #include "accTimer.h"
+#include "timeoutTimer.h"
 /*
  * DEW| software libraries
  */
@@ -75,7 +76,6 @@ bool SPI1_Busy = false;
 bool timerUpdated = false;
 int16_t accBuff[ACC_BUFFER_SIZE];
 uint8_t accBuffValue = 0;
-bool accBufferFull = false;
 /*
  * GPS globals
  */
@@ -99,6 +99,7 @@ int main(void){
 
 	struct node* lastNode = CoordinatorNode;
 	struct node* currNode = lastNode;
+	struct node* lastVehicle = NULL;
 
 	list_addNode(&lastNode,SERIAL_ADDR_LOW);
 
@@ -120,6 +121,7 @@ int main(void){
 	 *--- for coordinator
 	 */
 	uint16_t accDiff;
+	uint16_t accOffset = 0;
 	/*
 	 * Local variables for GPS
 	 */
@@ -197,7 +199,8 @@ int main(void){
 	//Timer_interrupt_enable();
 	Initialize_accTimer();
 	accTimer_interrupt_enable();
-
+	Initialize_timeoutTimer();
+	timeoutTimer_interrupt_enable();
 	/*
 	 * Setup xbee as it is will be needed anyways
 	 * for node to be initialized through network
@@ -278,6 +281,19 @@ int main(void){
 					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 				}
 				else{
+					/*
+					 * This executes if acc is initialized succesfully
+					 */
+					accOffset = returnX_axis();
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+					delayMs(4);
+					accOffset = (accOffset + returnX_axis())/2;
+
 					TIM_Cmd(TIM14,ENABLE);
 				}
 			}
@@ -465,6 +481,7 @@ int main(void){
 					if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
 						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
 
+							lastVehicle = lastNode;
 							list_addNode(&lastNode,SERIAL_ADDR_LOW);
 							lastNode->rssiMeasurment = 0x69; //(105 in decimal)
 
@@ -769,18 +786,6 @@ int main(void){
 					xbeeReceiveBuffer[i+3] = 'E';
 				}
 
-				/*
-				 * Timeout error setup
-				 * Clear timer
-				 * Clear interrupt
-				 * Enable interrupt
-				 */
-				if(currNode == lastNode){
-					TIM_SetCounter(TIM15,0);
-					TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
-					TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
-				}
-
 				//After reading source address, comes 2 reserved bytes
 				i = i + 2;
 				//In this case comandStatus actually is receive options
@@ -789,6 +794,19 @@ int main(void){
 				 * Whether the command(C) or measurement(M) was received
 				 */
 				if(xbeeReceiveBuffer[i] == 'M'){
+
+					/*
+					 * Timeout error setup
+					 * Clear timer
+					 * Clear interrupt
+					 * Enable interrupt
+					 */
+					if(currNode == lastVehicle){
+						TIM_SetCounter(TIM15,0);
+						TIM_ClearITPendingBit(TIM15, TIM_IT_Update);
+						TIM_ITConfig(TIM15, TIM_IT_Update, ENABLE);
+					}
+
 					/*
 					 * "M <state>#<acc>#<gps>"
 					 */
@@ -824,7 +842,12 @@ int main(void){
 					if((currNode->state&0x01) == ACC_STATE_CASE){
 
 						currNode->accMeasurment = atoi(stringOfACC);
-						CoordinatorNode->accMeasurment = (accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5;
+						CoordinatorNode->accMeasurment = (accBuff[(ACC_BUFFER_SIZE + accBuffValue-5)%ACC_BUFFER_SIZE]
+														+ accBuff[(ACC_BUFFER_SIZE + accBuffValue-6)%ACC_BUFFER_SIZE]
+														+ accBuff[(ACC_BUFFER_SIZE + accBuffValue-7)%ACC_BUFFER_SIZE]
+														+ accBuff[(ACC_BUFFER_SIZE + accBuffValue-8)%ACC_BUFFER_SIZE]
+														+ accBuff[(ACC_BUFFER_SIZE + accBuffValue-9)%ACC_BUFFER_SIZE])/5
+														- accOffset;
 
 						accDiff = abs(CoordinatorNode->accMeasurment - currNode->accMeasurment);
 
@@ -1378,9 +1401,6 @@ int main(void){
 				xbeeReading = false;
 			}
     	}
-
-
-
     }
 }
 
@@ -1443,7 +1463,6 @@ void TIM14_IRQHandler()
 
 		accBuff[accBuffValue++] = returnX_axis();
 		if(accBuffValue > ACC_BUFFER_SIZE-1){
-			accBufferFull = true;
 			accBuffValue = 0;
 		}
 	}

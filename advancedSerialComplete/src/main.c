@@ -499,7 +499,7 @@ int main(void)
 				while(currNode != NULL){
 					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 					currNode = currNode->nextNode;
-					delayMs(500);
+					//delayMs(1000);
 				}
 				currNode = CoordinatorNode;
 
@@ -1627,10 +1627,9 @@ int main(void)
 					}
 				break;
 				case (0x8E):
-					SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]);
+					SEND_SERIAL_BYTE(lastNode->id + 0x30);
 					SEND_SERIAL_BYTE('#');
 					SEND_SERIAL_MSG("TIM_DNG#");
-					SEND_SERIAL_MSG(&xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+4]);
 					SEND_SERIAL_MSG("\r\n");
 				break;
 				case (0x8F):
@@ -1895,7 +1894,7 @@ void TIM14_IRQHandler()
 	{
 		TIM_ClearITPendingBit(TIM14, TIM_IT_Update);
 
-		accBuff[accBuffValue++] = returnX_axis();
+		accBuff[accBuffValue++] = returnZ_axis();
 
 		char accString[6];
 		itoa(accBuff[accBuffValue-1], accString, 10);

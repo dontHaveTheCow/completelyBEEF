@@ -17,7 +17,7 @@
 
 //These are the Define statements
 #define TIM15_PRESCALER_VALUE 48000 //1 tick equals 1ms
-#define TIM15_PERIOD_VALUE 900
+#define TIM15_PERIOD_VALUE 800
 
 //These are the prototypes for the routines
 void Initialize_timeoutTimer(void);
