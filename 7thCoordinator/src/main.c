@@ -57,8 +57,8 @@
 #define NUMBER_OF_NODES 4
 #define ACC_BUFFER_SIZE 20
 
-#define SERIAL_ADDR_HIGH 0x0013A200
-#define SERIAL_ADDR_LOW 0x40E3E13C
+#define SERIAL_ADDR_HIGH 0x13A200
+#define SERIAL_ADDR_LOW 1088676158
 /*
  * XBEE globals
  */
@@ -92,7 +92,7 @@ int main(void){
 	uint32_t receivedAddressLow = 0;
 
 	struct node* CoordinatorNode = list_createRoot();
-	list_setAddress(CoordinatorNode,0x0013A200,0x40E3E13A);
+	list_setAddress(CoordinatorNode,1286656,1088629396);
 	CoordinatorNode->state = 0;
 	CoordinatorNode->velocity = 0.1;
 	CoordinatorNode->rssiMeasurment = 0x14;
