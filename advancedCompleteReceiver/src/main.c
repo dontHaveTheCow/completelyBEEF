@@ -183,6 +183,7 @@ int main(void){
 	 */
 	Usart2_Init(BAUD_4800);
 	Usart1_Init(BAUD_9600);
+	ConfigureUsart1Interrupt();
 	ConfigureUsart2Interrupt();
 	//used for delayMs()
 	//not meant for using in interrupt routines

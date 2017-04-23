@@ -186,6 +186,8 @@ int main(void){
 	}
 	XBEE_CS_HIGH();
 
+	GPIOB->ODR |= GPIO_Pin_8;
+
 	while(1){
 
 		switch (moduleStatus) {
@@ -221,49 +223,10 @@ int main(void){
 			xbeeTransmitString[3] = '#';
 			xbeeTransmitString[4] = state;
 			xbeeTransmitString[5] = '\0';
-			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-
+			transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 			break;
 
 		case MODULE_INITIALIZING:
-			if(state&0x01){
-				errorTimer = 10;
-				//SPI2 for ADXL
-				initializeADXL362();
-				blinkRedLed1();
-				while(!return_ADXL_ready() && --errorTimer > 0){
-					//wait time for caps to discharge
-					delayMs(500);
-					initializeADXL362();
-					delayMs(500);
-					blinkRedLed1();
-				}
-				if(!errorTimer){
-					state &=~(0x01);
-
-					xbeeTransmitString[0] = 'C';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = 0x8F;
-					xbeeTransmitString[3] = '#';
-					xbeeTransmitString[4] = 0x01; //acc not initialized error
-					xbeeTransmitString[5] = '\0';
-					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-				}
-				else{
-
-					accOffset = returnX_axis();
-					delayMs(4);
-					accOffset = (accOffset + returnX_axis())/2;
-					delayMs(4);
-					accOffset = (accOffset + returnX_axis())/2;
-					delayMs(4);
-					accOffset = (accOffset + returnX_axis())/2;
-					delayMs(4);
-					accOffset = (accOffset + returnX_axis())/2;
-
-					TIM_Cmd(TIM14,ENABLE);
-				}
-			}
 			errorTimer = 70;
 			if((state&0x02) >> 1){
 				turnGpsOn();
@@ -322,7 +285,7 @@ int main(void){
 					xbeeTransmitString[3] = '#';
 					xbeeTransmitString[4] = 0x02; //gps not initialized error
 					xbeeTransmitString[5] = '\0';
-					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+					transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 				}
 				else{
@@ -361,7 +324,7 @@ int main(void){
 					xbeeTransmitString[3] = '#';
 					xbeeTransmitString[4] = 0x03; //sd not initialized error
 					xbeeTransmitString[5] = '\0';
-					transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+					transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 				}
 				else{
@@ -396,7 +359,7 @@ int main(void){
 			xbeeTransmitString[3] = '#';
 			xbeeTransmitString[4] = state;
 			xbeeTransmitString[5] = '\0';
-			transmitRequest(SerialAddrHigh, SerialAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+			transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 			if(state == 0x00){
 				moduleStatus = 	MODULE_NOT_INITIALIZED;
@@ -439,7 +402,7 @@ int main(void){
 								xbeeTransmitString[4] = xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA];
 								xbeeTransmitString[5] = ' ';
 								xbeeTransmitString[6] = '\0';
-								transmitRequest(SerialAddrHigh,SerialAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+								transmitRequest(CoordAddrHigh,CoordAddrLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
 
 							}else{
@@ -788,28 +751,11 @@ void TIM15_IRQHandler(){
 		/*
 		 * Transmit shit here
 		 */
-		xbeeTransmitString[0] = 'M';
+		xbeeTransmitString[0] = 'C';
 		xbeeTransmitString[1] = ' ';
-		xbeeTransmitString[2] = state;
+		xbeeTransmitString[2] = 0x99;
 		xbeeTransmitString[3] = '\0';
-		if(state&0x01){
-			itoa((accBuff[0] + accBuff[1] + accBuff[2] + accBuff[3] + accBuff[4])/5 - accOffset, accString, 10);
-			strcat(xbeeTransmitString,"#");
-			strcat(xbeeTransmitString,&accString[0]);
-			xorGreenLed(0);
-		}
-		if((state&0x02) >> 1){
-			strcat(xbeeTransmitString,"#");
-			strcat(xbeeTransmitString,velocityString);
-			xorGreenLed(1);
-		}
-		if((state&0x08) >> 1){
-			strcat(xbeeTransmitString,"#");
-			strcat(xbeeTransmitString,lat);
-			strcat(xbeeTransmitString,"#");
-			strcat(xbeeTransmitString,lon);
-			xorGreenLed(2);
-		}
+
 		transmitRequest(CoordAddrHigh, CoordAddrLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 	}
 }

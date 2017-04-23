@@ -463,20 +463,21 @@ int main(void){
 			 * Parse RECEIVE command packet
 			 */
 			case RECIEVE_PACKET:
+
+				receivedAddHigh = 0;
+				receivedAddLow = 0;
+
+				receivedAddHigh |= xbeeReceiveBuffer[1] << 24;
+				receivedAddHigh |= xbeeReceiveBuffer[2] << 16;
+				receivedAddHigh |= xbeeReceiveBuffer[3] << 8;
+				receivedAddHigh |= xbeeReceiveBuffer[4];
+
+				receivedAddLow |= xbeeReceiveBuffer[5] << 24;
+				receivedAddLow |= xbeeReceiveBuffer[6] << 16;
+				receivedAddLow |= xbeeReceiveBuffer[7] << 8;
+				receivedAddLow |= xbeeReceiveBuffer[8];
+
 				if(xbeeReceiveBuffer[XBEE_DATA_MODE_OFFSET] == 'C'){
-
-					receivedAddHigh = 0;
-					receivedAddLow = 0;
-
-					receivedAddHigh |= xbeeReceiveBuffer[1] << 24;
-					receivedAddHigh |= xbeeReceiveBuffer[2] << 16;
-					receivedAddHigh |= xbeeReceiveBuffer[3] << 8;
-					receivedAddHigh |= xbeeReceiveBuffer[4];
-
-					receivedAddLow |= xbeeReceiveBuffer[5] << 24;
-					receivedAddLow |= xbeeReceiveBuffer[6] << 16;
-					receivedAddLow |= xbeeReceiveBuffer[7] << 8;
-					receivedAddLow |= xbeeReceiveBuffer[8];
 
 					switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
 					case (0x80):
@@ -567,8 +568,8 @@ int main(void){
 						break;
 					case (0x12):
 						if(moduleStatus == MODULE_IDLE){
-						//NODE_STOP
-						moduleStatus = MODULE_SAFE_TURNOFF;
+							//NODE_STOP
+							moduleStatus = MODULE_SAFE_TURNOFF;
 						}
 						break;
 					case (0x15):
@@ -645,6 +646,20 @@ int main(void){
 						break;
 					default:
 						break;
+					}
+				}
+				else if(xbeeReceiveBuffer[XBEE_DATA_MODE_OFFSET] == 'D'){
+
+					switch(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET]){
+					case ('0'):
+						Usart1_SendString("Broadcast message received\r\n");
+						//Register received address (Coordinator address)
+						CoordAddrHigh = receivedAddHigh;
+						CoordAddrLow = receivedAddLow;
+
+						//ACK
+						transmitRequest(CoordAddrHigh,CoordAddrLow,TRANSOPT_DISACK, 0x00,"D 1");
+						Usart1_SendString("Address sent to Coordinator, dude\r\n");
 					}
 				}
 				break;

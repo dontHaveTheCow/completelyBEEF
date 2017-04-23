@@ -1,7 +1,7 @@
 #include "Timer.h"
 
-void Initialize_timer(void)
-{
+void Initialize_timer(void){
+
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
 	TIM_TimeBaseInitTypeDef Timer_init_structure;
 	Timer_init_structure.TIM_CounterMode = TIM_CounterMode_Up;
@@ -14,8 +14,8 @@ void Initialize_timer(void)
 
 }
 
-void Timer_interrupt_enable(void)
-{
+void Timer_interrupt_enable(void){
+
 	NVIC_InitTypeDef NVIC_structure;
 	NVIC_structure.NVIC_IRQChannel = TIM2_IRQn;
 	NVIC_structure.NVIC_IRQChannelCmd = ENABLE;

@@ -22,7 +22,6 @@
 #include "ADXL362.h"
 #include "A2035H.h"
 #include "sdCard.h"
-#include "accTimer.h"
 #include "timeoutTimer.h"
 /*
  * DEW| software libraries
@@ -57,8 +56,14 @@
 #define NUMBER_OF_NODES 4
 #define ACC_BUFFER_SIZE 20
 
-#define SERIAL_ADDR_HIGH 0x13A200
-#define SERIAL_ADDR_LOW 1088676158
+#define TOGGLE_REDLED_SERIAL() GPIOB->ODR ^= GPIO_Pin_5
+
+/*
+ * Serial globals
+ */
+char serialBuffer[256];
+uint8_t packetLenght = 0;
+bool serialUpdated = false;
 /*
  * XBEE globals
  */
@@ -101,11 +106,6 @@ int main(void){
 	struct node* currNode = lastNode;
 	struct node* lastVehicle = NULL;
 
-	list_addNode(&lastNode,SERIAL_ADDR_LOW);
-
-/*	list_addNode(&lastNode,0x409783D9);
-	list_addNode(&lastNode,0x409783DA);
-	list_addNode(&lastNode,0x40E3E13D);*/
 	/*
 	 * Local variables for XBEE
 	 */
@@ -170,6 +170,13 @@ int main(void){
 	uint16_t thresholdTIM = 1000;
 	char thesholdString[8];
 	uint16_t timDiff = 0;
+
+	//Local variables - serial
+	char s_delimiter[2] = "#";
+	char key[32] = "";
+	char value[64];
+	char str_helper[32] = "";
+	char xbeeAddressLowString[12];
 	/*
 	 * Initializing gpio's
 	 */
@@ -181,9 +188,12 @@ int main(void){
 	/*
 	 * Initializing peripherals
 	 */
+
 	Usart2_Init(BAUD_4800);
 	Usart1_Init(BAUD_9600);
-	ConfigureUsart2Interrupt();
+	ConfigureUsart1Interrupt();
+	SEND_SERIAL_MSG("MSG#COORD_POWER_ON\r\n");
+	//ConfigureUsart2Interrupt();
 	//used for delayMs()
 	//not meant for using in interrupt routines
 	initialiseSysTick();
@@ -196,9 +206,8 @@ int main(void){
 	//ADC is used for battery monitoring
 	adcConfig();
 	Initialize_timer();
-	//Timer_interrupt_enable();
-	Initialize_accTimer();
-	accTimer_interrupt_enable();
+
+
 	Initialize_timeoutTimer();
 	timeoutTimer_interrupt_enable();
 	/*
@@ -246,14 +255,23 @@ int main(void){
 				/*
 				 * Send response to serial node about readiness
 				 */
-				xbeeTransmitString[0] = 'C';
-				xbeeTransmitString[1] = ' ';
-				xbeeTransmitString[2] = 0x87;
-				xbeeTransmitString[3] = '#';
-				xbeeTransmitString[4] = state;
-				xbeeTransmitString[5] = '\0';
-				transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-
+				SEND_SERIAL_BYTE('0');
+				SEND_SERIAL_MSG("#Coordinator_");
+				if(state&0x01){
+					SEND_SERIAL_MSG("ACC#");
+				}
+				if((state >> 1)&0x01){
+					SEND_SERIAL_MSG("GPS#");
+				}
+				if((state >> 2)&0x01){
+					SEND_SERIAL_MSG("SD#");
+				}
+				if(state == 0x00){
+					SEND_SERIAL_MSG("NOT_INITIALIZED\r\n");
+				}
+				else{
+					SEND_SERIAL_MSG("IDLE_AND_READY\r\n");
+				}
 				break;
 			case MODULE_INITIALIZING:
 
@@ -271,14 +289,7 @@ int main(void){
 				}
 				if(!errorTimer){
 					state &=~(0x01);
-
-					xbeeTransmitString[0] = 'C';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = 0x8F;
-					xbeeTransmitString[3] = '#';
-					xbeeTransmitString[4] = 0x01; //acc not initialized error
-					xbeeTransmitString[5] = '\0';
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+					SEND_SERIAL_MSG("0#ERROR#ACC_INIT");
 				}
 				else{
 					/*
@@ -349,13 +360,7 @@ int main(void){
 					hibernateGps();
 					state &= 0xFD;
 
-					xbeeTransmitString[0] = 'C';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = 0x8F;
-					xbeeTransmitString[3] = '#';
-					xbeeTransmitString[4] = 0x02; //gps not initialized error
-					xbeeTransmitString[5] = '\0';
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+					SEND_SERIAL_MSG("0#ERROR#GPS_INIT");
 				}
 				else{
 					//if satellites found -> turn on $GPVTG to monitor velocity
@@ -383,13 +388,7 @@ int main(void){
 					//If sd card doesnt turn on, dont log anything to it
 					state &= 0xFB;
 
-					xbeeTransmitString[0] = 'C';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = 0x8F;
-					xbeeTransmitString[3] = '#';
-					xbeeTransmitString[4] = 0x03; //sd not initialized error
-					xbeeTransmitString[5] = '\0';
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_PTMPT, 0x00, xbeeTransmitString);
+					SEND_SERIAL_MSG("0#ERROR#SD_INIT");
 				}
 				else{
 
@@ -409,13 +408,23 @@ int main(void){
 			/*
 			 * Send response to serial node about readiness
 			 */
-			xbeeTransmitString[0] = 'C';
-			xbeeTransmitString[1] = ' ';
-			xbeeTransmitString[2] = 0x87;
-			xbeeTransmitString[3] = '#';
-			xbeeTransmitString[4] = state;
-			xbeeTransmitString[5] = '\0';
-			transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+			SEND_SERIAL_BYTE('0');
+			SEND_SERIAL_MSG("#Coordinator_");
+			if(state&0x01){
+				SEND_SERIAL_MSG("ACC#");
+			}
+			if((state >> 1)&0x01){
+				SEND_SERIAL_MSG("GPS#");
+			}
+			if((state >> 2)&0x01){
+				SEND_SERIAL_MSG("SD#");
+			}
+			if(state == 0x00){
+				SEND_SERIAL_MSG("NOT_INITIALIZED\r\n");
+			}
+			else{
+				SEND_SERIAL_MSG("IDLE_AND_READY\r\n");
+			}
 
 			if(state == 0x00){
 				moduleStatus = 	MODULE_NOT_INITIALIZED;
@@ -439,6 +448,307 @@ int main(void){
 
 				break;
 		}
+		if(serialUpdated){
+
+			str_splitter(serialBuffer,key,value,s_delimiter);
+
+    		if(strcmp(key,"SEND_MESSAGE") == 0){
+				str_splitter(value,key,str_helper,s_delimiter);
+				currNode = list_findNodeById(atoi(key),currNode,CoordinatorNode);
+				if(currNode == NULL)
+					SEND_SERIAL_MSG("list_findNodeById error \r\n");
+
+    			if(currNode->id < lastNode->id)
+    				transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,str_helper);
+				SEND_SERIAL_MSG("DEBUG#Message sent...\r\n");
+    		}
+			else if(strcmp(key,"DISCOVER_NET") == 0){
+				list_clearNodes(CoordinatorNode);
+				lastNode = CoordinatorNode;
+				currNode = CoordinatorNode;
+
+				xbeeApplyParamter("NO",0x04,AT_FRAME_ID_APPLY);
+				//NO_STATUS_WILL_BE_RECEIVED_AFTER_ALL_NODES_ARE_FOUND
+				askXbeeParam("FN",AT_FRAME_ID_REQUEST);
+				SEND_SERIAL_MSG("DEBUG#Network discovery started...\r\n");
+			}
+			else if(strcmp(key,"GET_NODE_LIST") == 0){
+
+				if(list_sortByRSSI(CoordinatorNode) == 1){
+					//error while sorting
+					SEND_SERIAL_MSG("0#ERROR#NODE_LIST_SORTING");
+					break;
+				}
+				currNode = CoordinatorNode;
+
+				if(currNode == NULL){
+					currNode = CoordinatorNode;
+					SEND_SERIAL_MSG("0#ERROR#NODE_DISCOVERY");
+					break;
+				}
+
+				while(currNode != NULL){
+
+					SEND_SERIAL_BYTE(currNode->id + 0x30);
+					SEND_SERIAL_MSG("#ADDR#");
+					itoa(currNode->addressLow,xbeeAddressLowString, 16);
+					SEND_SERIAL_MSG(xbeeAddressLowString);
+					SEND_SERIAL_MSG("\r\n");
+					currNode = currNode->nextNode;
+
+				}
+					currNode = CoordinatorNode;
+			}
+			else if(strcmp(key,"SET_THRACC") == 0){
+
+				thresholdACC = atoi(value);
+				itoa(thresholdACC,thesholdString,10);
+
+				SEND_SERIAL_MSG("MSG#ACC_THRESHOLD#");
+				SEND_SERIAL_MSG(thesholdString);
+				SEND_SERIAL_MSG("\r\n");
+
+			}
+			else if(strcmp(key,"SET_THRRSSI") == 0){
+
+				thresholdRSSI = atoi(value);
+				itoa(thresholdRSSI,thesholdString,10);
+
+				SEND_SERIAL_MSG("MSG#RSSI_THRESHOLD#");
+				SEND_SERIAL_MSG(thesholdString);
+				SEND_SERIAL_MSG("\r\n");
+			}
+			else if(strcmp(key,"SET_THRTIM") == 0){
+
+				thresholdTIM = atoi(value);
+				itoa(thresholdTIM,thesholdString,10);
+
+				SEND_SERIAL_MSG("MSG#TIM_THRESHOLD#");
+				SEND_SERIAL_MSG(thesholdString);
+				SEND_SERIAL_MSG("\r\n");
+			}
+
+			else if(strcmp(key,"INIT_NODE") == 0){
+
+				if(atoi(value) == 0){
+					if(moduleStatus == MODULE_NOT_INITIALIZED){
+						moduleStatus = MODULE_INITIALIZING;
+						state = 1;
+					}
+				}
+				else{
+					xbeeTransmitString[0] = 'C';
+					xbeeTransmitString[1] = ' ';
+					xbeeTransmitString[2] = 0x0F;
+					xbeeTransmitString[3] = ' ';
+					xbeeTransmitString[4] = '1';
+					xbeeTransmitString[5] = '\0';
+					currNode = list_findNodeById(atoi(value), currNode, CoordinatorNode);
+					if(currNode == NULL){
+						SEND_SERIAL_MSG("0#ERROR#LIST_ERROR");
+						currNode = CoordinatorNode;
+					}
+					else{
+						transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					}
+				}
+			}
+			else if(strcmp(key,"INIT_ALL") == 0){
+
+				if(moduleStatus == MODULE_NOT_INITIALIZED){
+					moduleStatus = MODULE_INITIALIZING;
+					state = 1;
+				}
+
+				xbeeTransmitString[0] = 'C';
+				xbeeTransmitString[1] = ' ';
+				xbeeTransmitString[2] = 0x0F;
+				xbeeTransmitString[3] = ' ';
+				xbeeTransmitString[4] = '1';
+				xbeeTransmitString[5] = '\0';
+
+				currNode = CoordinatorNode->nextNode;
+				while(currNode != NULL){
+					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					currNode = currNode->nextNode;
+					delayMs(2000);
+				}
+			}
+			else if(strcmp(key,"IDLE_NODE") == 0){
+
+				if(atoi(value) == 0){
+					if(moduleStatus == MODULE_EXPERIMENT_MODE){
+						moduleStatus = MODULE_IDLE;
+
+						SEND_SERIAL_BYTE(0 + ASCII_DIGIT_OFFSET);
+						SEND_SERIAL_MSG("#NODE_");
+						if((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2])&0x01){
+							SEND_SERIAL_MSG("ACC#");
+						}
+						if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 1)&0x01){
+							SEND_SERIAL_MSG("GPS#");
+						}
+						if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 2)&0x01){
+							SEND_SERIAL_MSG("SD#");
+						}
+						if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x00){
+							SEND_SERIAL_MSG("NOT_INITIALIZED\r\n");
+						}
+						else{
+							SEND_SERIAL_MSG("IDLE_AND_READY\r\n");
+						}
+					}
+				}
+				else{
+					strcpy(&xbeeTransmitString[0],"C  \0");
+					xbeeTransmitString[2] = 0x11;
+					currNode = list_findNodeById(atoi(value), currNode, CoordinatorNode);
+					if(currNode == NULL){
+						SEND_SERIAL_MSG("0#ERROR#LIST_ERROR");
+						currNode = CoordinatorNode;
+					}
+					else{
+						transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					}
+				}
+
+			}
+			else if(strcmp(key,"IDLE_ALL") == 0){
+
+
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x11;
+
+				currNode = CoordinatorNode->nextNode;
+				while(currNode != NULL){
+					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					currNode = currNode->nextNode;
+					delayMs(2000);
+				}
+				currNode = CoordinatorNode;
+				if(moduleStatus == MODULE_EXPERIMENT_MODE){
+					moduleStatus = MODULE_IDLE;
+
+					SEND_SERIAL_BYTE(0+ ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_MSG("#Coordinator#");
+					if((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2])&0x01){
+						SEND_SERIAL_MSG("ACC#");
+					}
+					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 1)&0x01){
+						SEND_SERIAL_MSG("GPS#");
+					}
+					if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 2)&0x01){
+						SEND_SERIAL_MSG("SD#");
+					}
+					if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x00){
+						SEND_SERIAL_MSG("NOT_INITIALIZED\r\n");
+					}
+					else{
+						SEND_SERIAL_MSG("IDLE_AND_READY\r\n");
+					}
+				}
+
+			}
+			else if(strcmp(key,"STOP_NODE") == 0){
+
+				if(atoi(value) == 0){
+					if(moduleStatus == MODULE_IDLE){
+					//NODE_STOP
+					moduleStatus = MODULE_SAFE_TURNOFF;
+
+					}
+				}
+				else{
+					strcpy(&xbeeTransmitString[0],"C  \0");
+					xbeeTransmitString[2] = 0x12;
+					currNode = list_findNodeById(atoi(value), currNode, CoordinatorNode);
+					if(currNode == NULL){
+						SEND_SERIAL_MSG("0#ERROR#LIST_ERROR");
+						currNode = CoordinatorNode;
+					}
+					else{
+						transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					}
+				}
+
+			}
+			else if(strcmp(key,"STOP_ALL") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x12;
+				currNode = CoordinatorNode->nextNode;
+				while(currNode != NULL){
+					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					currNode = currNode->nextNode;
+					delayMs(2000);
+				}
+				currNode = CoordinatorNode;
+				if(moduleStatus == MODULE_IDLE){
+					//NODE_STOP
+					moduleStatus = MODULE_SAFE_TURNOFF;
+				}
+			}
+			else if(strcmp(key,"START_NODE") == 0){
+
+				if(atoi(value) == 0){
+					if(moduleStatus == MODULE_IDLE){
+						moduleStatus = MODULE_EXPERIMENT_MODE;
+					}
+				}
+				else{
+					strcpy(&xbeeTransmitString[0],"C  \0");
+					xbeeTransmitString[2] = 0x10;
+					currNode = list_findNodeById(atoi(value), currNode, CoordinatorNode);
+					if(currNode == NULL){
+						SEND_SERIAL_MSG("list_findNodeById error \r\n");
+						currNode = CoordinatorNode;
+					}
+					else{
+						transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					}
+				}
+
+			}
+			else if(strcmp(key,"START_ALL") == 0){
+
+				if(moduleStatus == MODULE_IDLE){
+					moduleStatus = MODULE_EXPERIMENT_MODE;
+				}
+
+				strcpy(&xbeeTransmitString[0],"C  \0");
+				xbeeTransmitString[2] = 0x10;
+
+				currNode = CoordinatorNode->nextNode;
+				while(currNode != NULL){
+					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+					currNode = currNode->nextNode;
+					delayMs(2000);
+				}
+				currNode = CoordinatorNode;
+
+			}
+			else if(strcmp(key,"SET_POWER") == 0){
+
+				strcpy(&xbeeTransmitString[0],"C   ");
+				xbeeTransmitString[2] = 0x18;
+				str_splitter(value,key,str_helper,s_delimiter);
+				strcpy(&xbeeTransmitString[4],str_helper);
+				currNode = list_findNodeById(atoi(value), currNode, CoordinatorNode);
+				if(currNode == NULL){
+					SEND_SERIAL_MSG("list_findNodeById error \r\n");
+					currNode = CoordinatorNode;
+				}
+				else{
+					transmitRequest(currNode->addressHigh,currNode->addressLow,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+				}
+				SEND_SERIAL_MSG("DEBUG#PACKET#SENT...\r\n");
+			}
+			else{
+				SEND_SERIAL_MSG("#ERROR#Inappropriate cmd\r\n");
+			}
+    		serialUpdated = false;
+		}
+
     	if(xbeeDataUpdated == true){
     		typeOfFrame = xbeeReceiveBuffer[0];
     		switch(typeOfFrame){
@@ -453,7 +763,7 @@ int main(void){
 							//SEND_SERIAL_MSG("DEBUG#SERIAL POWER LEVEL:");
 							//SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA]+ASCII_DIGIT_OFFSET);
 							//SEND_SERIAL_MSG("\r\n");
-							strcpy(&xbeeTransmitString[0],"C  \0");
+/*							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[0] = 'C';
 							xbeeTransmitString[1] = ' ';
 							xbeeTransmitString[2] = 0x8B;
@@ -461,7 +771,7 @@ int main(void){
 							xbeeTransmitString[4] = xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA];
 							xbeeTransmitString[5] = ' ';
 							xbeeTransmitString[6] = '\0';
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);*/
 
 
 						}else{
@@ -481,36 +791,25 @@ int main(void){
 					if(xbeeReceiveBuffer[XBEE_FRAME_ID_INDEX] == AT_FRAME_ID_REQUEST){
 						if(xbeeReceiveBuffer[XBEE_AT_COMMAND_STATUS] == 0){
 
-							lastVehicle = lastNode;
-							list_addNode(&lastNode,SERIAL_ADDR_LOW);
-							lastNode->rssiMeasurment = 0x69; //(105 in decimal)
-
 							if(xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA] != 4){
-								xbeeTransmitString[0] = 'C';
-								xbeeTransmitString[1] = ' ';
-								xbeeTransmitString[2] = 0x8F;
-								xbeeTransmitString[3] = '#';
-								xbeeTransmitString[4] = 0x04; //Node discovery error
-								xbeeTransmitString[5] = '\0';
-								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
+								SEND_SERIAL_MSG("0#ERROR#NODE_DISCOVERY");
 							}
 							else{
 
 								/*
 								 * Send info to gateway that all nodes are found...
 								 */
-								xbeeTransmitString[0] = 'C';
-								xbeeTransmitString[1] = ' ';
-								xbeeTransmitString[2] = 0x92;
-								xbeeTransmitString[3] = '#';
+								SEND_SERIAL_MSG("MSG#DONE,TOTALLY#");
 								if(lastNode != NULL){
-									xbeeTransmitString[4] = lastNode->id - 1; //id of last node (do not inform a bout gateway)
+									SEND_SERIAL_BYTE((lastNode->id / 10) + 0x30);
+									SEND_SERIAL_BYTE((lastNode->id % 10) + 0x30);
+									SEND_SERIAL_BYTE('\r');
+									SEND_SERIAL_BYTE('\n');
 								}
 								else{
-									xbeeTransmitString[4] = 0x00; //Node discovery error
+									SEND_SERIAL_MSG("0#ERROR#NODE_DISCOVERY");
 								}
-								xbeeTransmitString[5] = '\0';
-								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							}
 						}else{
 							SEND_SERIAL_MSG("NO_AT_COMMAND_REQUEST_ERROR\r\n");
@@ -542,39 +841,23 @@ int main(void){
 								+(xbeeReceiveBuffer[XBEE_FN_ADDRESSL_INDEX+2] << 8)
 								+(xbeeReceiveBuffer[XBEE_FN_ADDRESSL_INDEX+3]);
 
-						if(receivedAddressLow != SERIAL_ADDR_LOW){
+						list_addNode(&lastNode,receivedAddressLow);
+						lastNode->transferToGateway = true;
 
-							list_addNode(&lastNode,receivedAddressLow);
-							lastNode->transferToGateway = true;
+						if(lastNode == NULL){
+							SEND_SERIAL_MSG("0#ERROR#NODE_DISCOVERY");
+						}
+						else{
+							lastNode->rssiMeasurment = xbeeReceiveBuffer[length-1];
 
-							if(lastNode == NULL){
-								xbeeTransmitString[0] = 'C';
-								xbeeTransmitString[1] = ' ';
-								xbeeTransmitString[2] = 0x8F;
-								xbeeTransmitString[3] = '#';
-								xbeeTransmitString[4] = 0x05; //Node discovery error
-								xbeeTransmitString[5] = '\0';
-								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-							}
-							else{
-								lastNode->rssiMeasurment = xbeeReceiveBuffer[length-1];
-
-								xbeeTransmitString[0] = 'C';
-								xbeeTransmitString[1] = ' ';
-								xbeeTransmitString[2] = 0x90;
-								xbeeTransmitString[3] = '#';
-								xbeeTransmitString[4] = lastNode->id;
-								xbeeTransmitString[5] = '#';
-								xbeeTransmitString[6] = lastNode->rssiMeasurment;
-								xbeeTransmitString[7] = '#';
-								xbeeTransmitString[8] = lastNode->addressLow >> 24; //Inform gateway about found nodes id
-								xbeeTransmitString[9] = lastNode->addressLow >> 16;
-								xbeeTransmitString[10] = lastNode->addressLow >> 8;
-								xbeeTransmitString[11] = lastNode->addressLow;
-								xbeeTransmitString[12] = '\0';
-
-								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-							}
+							SEND_SERIAL_MSG("MSG#DISC#");
+							SEND_SERIAL_BYTE((lastNode->rssiMeasurment / 10) + 0x30);
+							SEND_SERIAL_BYTE((lastNode->rssiMeasurment % 10) + 0x30);
+							SEND_SERIAL_BYTE('#');
+							itoa(receivedAddressLow,xbeeAddressLowString, 16);
+							SEND_SERIAL_MSG(xbeeAddressLowString);
+							SEND_SERIAL_BYTE('\r');
+							SEND_SERIAL_BYTE('\n');
 						}
 					}
 				}
@@ -594,14 +877,14 @@ int main(void){
 										+ (xbeeReceiveBuffer[XBEE_AT_COMMAND_DATA+1]);
 							}
 
-							strcpy(&xbeeTransmitString[0],"C  \0");
+/*							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[0] = 'C';
 							xbeeTransmitString[1] = ' ';
 							xbeeTransmitString[2] = 0x8C;
 							xbeeTransmitString[3] = ' ';
 							itoa(channelMask,&xbeeTransmitString[4],10);
 
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);*/
 
 						}else{
 							//SEND_SERIAL_MSG("PL_AT_COMMAND_REQUEST_ERROR\r\n");
@@ -616,123 +899,18 @@ int main(void){
 					}
 				}
 				else if(xbeeReceiveBuffer[2] == 'D' && xbeeReceiveBuffer[3] == 'B'){
-					if(currNode->avarageRSSIcount == 6){
+
 						currNode->rssiMeasurment = xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX];
+						SEND_SERIAL_BYTE(currNode->id + 0x30);
+						SEND_SERIAL_MSG("#RSSI#");
+						SEND_SERIAL_BYTE((currNode->rssiMeasurment % 100) / 10 + 0x30);
+						SEND_SERIAL_BYTE(currNode->rssiMeasurment % 10 + 0x30);
+						SEND_SERIAL_BYTE('\r');
+						SEND_SERIAL_BYTE('\n');
 						/*
 						 * If threshold was exceeded - raise an alarm bit
 						 */
-						rssiDiff = abs(currNode->avrRSSI - currNode->rssiMeasurment);
 
-						if(rssiDiff > thresholdRSSI){
-							currNode->errorByte |= 0x02;
-						}
-						else{
-							/*
-							 * If threshold was not exceeded - clear an alarm bit
-							 */
-							currNode->errorByte &= 0x05;
-						}
-					}
-					/*
-					 * From first couple of packets - calculate avarage rssi
-					 */
-					else if(currNode->avarageRSSIcount++ < 6){
-						if(currNode->avarageRSSIcount==1){
-							currNode->avrRSSI = xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX];
-						}else{
-							currNode->avrRSSI = (xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX] + currNode->avrRSSI) / 2 ;
-						}
-					}
-					/*
-					 * *** ERROR CHECKING ROUTINE ***
-					 *
-					 * Error is checked after reading the RSSI value
-					 * Node's id is stored in AT packets frame_id value
-					 *
-					 * Last 3 bits of errorByte represents gps,rssi and acc error
-					 *
-					 * If more then one sensor reads danger value, the alarm routine is called
-					 *
-					 * Blinking means that received measurement was good
-					 * Solid light means error
-					 */
-
-					if((currNode->errorByte & 0x01)+((currNode->errorByte >> 1)&0x01)+(currNode->errorByte >> 2) > 1){
-
-						GPIOB->ODR |= (1 << (5+currNode->id));
-					}
-					else{
-						//indicate that one of the five nodes received packet was good
-						GPIOB->ODR ^= (1 << (5+currNode->id));
-					}
-
-					/*
-					 * Sending relative/absolute values
-					 */
-					if(currNode->transferToGateway == true){
-						//Re-send data to serial node
-						if(currNode->state == ACC_STATE_CASE){
-							xbeeTransmitString[0] = 'C';
-							xbeeTransmitString[1] = ' ';
-							xbeeTransmitString[2] = 0x88;
-							xbeeTransmitString[3] = ' ';
-							xbeeTransmitString[4] = currNode->id + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[5] = '#';
-							xbeeTransmitString[6] = (xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX] / 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[7] = (xbeeReceiveBuffer[AT_COMMAND_DATA_INDEX] % 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[8] = '#';
-							xbeeTransmitString[9] = currNode->errorByte + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[10] = '#';
-							itoa(accDiff,stringOfRelative,10);
-							strcpy(&xbeeTransmitString[11],stringOfRelative);
-							strcat(xbeeTransmitString,"#");
-							//absolute coordinator acc
-							itoa(CoordinatorNode->accMeasurment,stringOfMessurement,10);
-							strcat(xbeeTransmitString,stringOfMessurement);
-						}
-						else if(currNode->state == GPS_STATE_CASE){
-							xbeeTransmitString[0] = 'C';
-							xbeeTransmitString[1] = ' ';
-							xbeeTransmitString[2] = 0x89;
-							xbeeTransmitString[3] = ' ';
-							ftoa(velocityDiff,stringOfRelative,1);
-							xbeeTransmitString[4] = currNode->id + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[5] = '#';
-							xbeeTransmitString[6] = (rssiDiff / 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[7] = (rssiDiff % 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[8] = '#';
-							xbeeTransmitString[9] = currNode->errorByte + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[10] = '#';
-							strcpy(&xbeeTransmitString[11],stringOfRelative);
-							strcat(xbeeTransmitString,"#");
-							strcat(xbeeTransmitString,stringOfGPS);
-						}
-						else if(currNode->state == GPS_COORD_CASE){
-
-							xbeeTransmitString[0] = 'C';
-							xbeeTransmitString[1] = ' ';
-							xbeeTransmitString[2] = 0x8A;
-							xbeeTransmitString[3] = ' ';
-							xbeeTransmitString[4] = currNode->id + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[5] = '#';
-							xbeeTransmitString[6] = (currNode->rssiMeasurment / 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[7] = (currNode->rssiMeasurment % 10) + ASCII_DIGIT_OFFSET;
-							xbeeTransmitString[8] = '#';
-							strcpy(&xbeeTransmitString[9],receivedLat);
-							strcat(xbeeTransmitString,"#");
-							strcat(xbeeTransmitString,receivedLon);
-							strcat(xbeeTransmitString,"#");
-							strcat(xbeeTransmitString,lat);
-							strcat(xbeeTransmitString,"#");
-							strcat(xbeeTransmitString,lon);
-						}
-						transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-						if(((state&0x04) >> 2)){
-							SPI1_Busy = true;
-							appendTextToTheSD(xbeeTransmitString, '\n',&sdBufferCurrentSymbol, sdBuffer, "LOGFILE", &filesize, mstrDir, fatSect, &cluster, &sector);
-							SPI1_Busy = false;
-						}
-					}
 				}
 				/*
 				 * Other possible AT data
@@ -767,20 +945,20 @@ int main(void){
 					}
 				}
 
+				currNode = CoordinatorNode;
 				if(currNode == NULL){
 					Usart1_SendString("currNode is NULL, giving a Coordinator reference...\r\n");
 					currNode = CoordinatorNode;
 				}
 				currNode = list_findNodeByAdd(receivedAddressLow,currNode,CoordinatorNode);
 				if(currNode == NULL){
-					xbeeTransmitString[0] = 'C';
-					xbeeTransmitString[1] = ' ';
-					xbeeTransmitString[2] = 0x8F;
-					xbeeTransmitString[3] = '#';
-					xbeeTransmitString[4] = 0x05; //Node discovery error
-					xbeeTransmitString[5] = '\0';
-					Usart1_SendString("list_findNodeByAdd() error...\r\n");
-					transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+
+					SEND_SERIAL_BYTE(0 + ASCII_DIGIT_OFFSET);
+					SEND_SERIAL_BYTE('#');
+					SEND_SERIAL_MSG("ERROR#");
+					SEND_SERIAL_MSG("LIST_FUNCTION()");
+					SEND_SERIAL_MSG("\r\n");
+
 
 					//Write garbage so that no packets are processed after error
 					xbeeReceiveBuffer[i+3] = 'E';
@@ -943,155 +1121,12 @@ int main(void){
 							/*
 							 * Positive response
 							 */
-							strcpy(&xbeeTransmitString[0],"C  \0");
+			/*				strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);*/
 						}
 						break;
-					case (0x03):
-						/*
-						 *SET_THRACC
-						 */
-						thresholdACC = atoi(&xbeeReceiveBuffer[16]);
-						itoa(thresholdACC,thesholdString,10);
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x83;
-						xbeeTransmitString[3] = ' ';
-						strcpy(&xbeeTransmitString[4],thesholdString);
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
-
-						break;
-					case (0x04):
-						/*
-						 *SET_THRGPS
-						 */
-						thresholdGPS = atoi(&xbeeReceiveBuffer[16]);
-						itoa(thresholdGPS,thesholdString,10);
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x84;
-						xbeeTransmitString[3] = ' ';
-						strcpy(&xbeeTransmitString[4],thesholdString);
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
-
-						break;
-					case (0x05):
-						/*
-						 *SET_THRRSSI
-						 */
-						thresholdRSSI = atoi(&xbeeReceiveBuffer[16]);
-						itoa(thresholdRSSI,thesholdString,10);
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x82;
-						xbeeTransmitString[3] = ' ';
-						strcpy(&xbeeTransmitString[4],thesholdString);
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
-
-						break;
-					case (0x06):
-						/*
-						 *GET_THRRSSI
-						 */
-						itoa(thresholdRSSI,thesholdString,10);
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x82;
-						xbeeTransmitString[3] = ' ';
-						strcpy(&xbeeTransmitString[4],thesholdString);
-						transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-
-						break;
-					case (0x07):
-						/*
-						 *GET_THRACC
-						 */
-						itoa(thresholdACC,thesholdString,10);
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x83;
-						xbeeTransmitString[3] = ' ';
-						strcpy(&xbeeTransmitString[4],thesholdString);
-						transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-
-						break;
-					case (0x08):
-						/*
-						 *GET_THRGPS
-						 */
-						itoa(thresholdGPS,thesholdString,10);
-						xbeeTransmitString[0] = 'C';
-						xbeeTransmitString[1] = ' ';
-						xbeeTransmitString[2] = 0x84;
-						xbeeTransmitString[3] = ' ';
-						strcpy(&xbeeTransmitString[4],thesholdString);
-						transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-
-						break;
-					case (0x09):
-						/*
-						 *GET_ABSREL_NODE / GET_ABSREL_ALL
-						 */
-						if(xbeeReceiveBuffer[16] == '7'){
-							list_setTransferForAll(CoordinatorNode,true);
-						}
-						else{
-							currNode = list_findNodeById(atoi(&xbeeReceiveBuffer[16]), currNode, CoordinatorNode);
-							if(currNode == NULL){
-								xbeeTransmitString[0] = 'C';
-								xbeeTransmitString[1] = ' ';
-								xbeeTransmitString[2] = 0x8F;
-								xbeeTransmitString[3] = '#';
-								xbeeTransmitString[4] = 0x04; //Node discovery error
-								xbeeTransmitString[5] = '\0';
-								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-								//Set currNode to other value than NULL
-								//Or set it to null right after packet is received
-							}
-							else{
-								currNode->transferToGateway = true;
-							}
-						}
-						/*
-						 * Positive response
-						 */
-						strcpy(&xbeeTransmitString[0],"C  \0");
-						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
-
-						break;
-					case (0x0A):
-						/*
-						 *STOP_ABSREL_NODE
-						 */
-						if(xbeeReceiveBuffer[16] == '7'){
-							list_setTransferForAll(CoordinatorNode,false);
-						}
-						else{
-							currNode = list_findNodeById(atoi(&xbeeReceiveBuffer[16]), currNode, CoordinatorNode);
-							if(currNode == NULL){
-								xbeeTransmitString[0] = 'C';
-								xbeeTransmitString[1] = ' ';
-								xbeeTransmitString[2] = 0x8F;
-								xbeeTransmitString[3] = '#';
-								xbeeTransmitString[4] = 0x04; //Node discovery error
-								xbeeTransmitString[5] = '\0';
-								transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
-							}
-							else{
-								currNode->transferToGateway = false;
-							}
-						}
-						/*
-						 * Positive response
-						 */
-						strcpy(&xbeeTransmitString[0],"C  \0");
-						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
-
-						break;
 					case (0x0F):
 						/*
 						 * Init. request
@@ -1116,7 +1151,7 @@ int main(void){
 							 */
 							strcpy(&xbeeTransmitString[0],"C  \0");
 							xbeeTransmitString[2] = 0x81;
-							transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+							//transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 						}
 						break;
 					case (0x11):
@@ -1134,7 +1169,7 @@ int main(void){
 							xbeeTransmitString[3] = '#';
 							xbeeTransmitString[4] = state;
 							xbeeTransmitString[5] = '\0';
-							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							//transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						}
 						break;
 					case (0x12):
@@ -1182,19 +1217,7 @@ int main(void){
 						strcpy(&xbeeTransmitString[4],thesholdString);
 						transmitRequest(currNode->addressHigh, currNode->addressLow, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 						break;
-					case (0x16):
-						/*
-						 * GET_GPSCOORD_NODE
-						 */
-						readingVelocity = false;
-						/*
-						 * Positive response
-						 */
-						strcpy(&xbeeTransmitString[0],"C  \0");
-						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
 
-						break;
 					case (0x17):
 						//GET POWER
 						askXbeeParam("PL",AT_FRAME_ID_REQUEST);
@@ -1248,7 +1271,7 @@ int main(void){
 							xbeeTransmitString[3] = '#';
 							xbeeTransmitString[4] = 0x06; //Node discovery error
 							xbeeTransmitString[5] = '\0';
-							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							//transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							break;
 						}
 						currNode = CoordinatorNode->nextNode;
@@ -1262,7 +1285,7 @@ int main(void){
 							xbeeTransmitString[3] = '#';
 							xbeeTransmitString[4] = 0x07; //No nodes found error
 							xbeeTransmitString[5] = '\0';
-							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							//transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 							break;
 						}
@@ -1280,7 +1303,7 @@ int main(void){
 							xbeeTransmitString[8] = currNode->addressLow >> 8;
 							xbeeTransmitString[9] = currNode->addressLow;
 							xbeeTransmitString[10] = '\0';
-							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							//transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 
 							currNode = currNode->nextNode;
 							/*
@@ -1304,16 +1327,16 @@ int main(void){
 							xbeeTransmitString[3] = '#';
 							xbeeTransmitString[4] = 0x07; //No nodes found error
 							xbeeTransmitString[5] = '\0';
-							transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
+							//transmitRequest(SERIAL_ADDR_HIGH, SERIAL_ADDR_LOW, TRANSOPT_DISACK, 0x00, xbeeTransmitString);
 							break;
 						}
 						strcpy(&xbeeTransmitString[0],"C  \0");
 						xbeeTransmitString[2] = 0x1E;
 						xbeeTransmitString[3] = '#';
-						xbeeTransmitString[4] = SERIAL_ADDR_LOW >> 24;
-						xbeeTransmitString[5] = SERIAL_ADDR_LOW >> 16;
-						xbeeTransmitString[6] = SERIAL_ADDR_LOW >> 8;
-						xbeeTransmitString[7] = SERIAL_ADDR_LOW;
+						//xbeeTransmitString[4] = SERIAL_ADDR_LOW >> 24;
+						//xbeeTransmitString[5] = SERIAL_ADDR_LOW >> 16;
+						//xbeeTransmitString[6] = SERIAL_ADDR_LOW >> 8;
+						//xbeeTransmitString[7] = SERIAL_ADDR_LOW;
 						xbeeTransmitString[8] = '\0';
 
 						while(currNode != NULL){
@@ -1326,7 +1349,93 @@ int main(void){
 
 						strcpy(&xbeeTransmitString[0],"C  \0");
 						xbeeTransmitString[2] = 0x81;
-						transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						//transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeTransmitString);
+						break;
+					case (0x87):
+
+						//Status response from nodes
+						SEND_SERIAL_BYTE(currNode->id + ASCII_DIGIT_OFFSET);
+						SEND_SERIAL_MSG("#NODE#");
+						if((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2])&0x01){
+							SEND_SERIAL_MSG("ACC#");
+						}
+						if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 1)&0x01){
+							SEND_SERIAL_MSG("GPS#");
+						}
+						if(((xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2]) >> 2)&0x01){
+							SEND_SERIAL_MSG("SD#");
+						}
+						if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x00){
+							SEND_SERIAL_MSG("NOT_INITIALIZED\r\n");
+						}
+						else{
+							SEND_SERIAL_MSG("IDLE_AND_READY\r\n");
+						}
+
+						break;
+
+					case (0x8F):
+
+						//Error status response from nodes
+						SEND_SERIAL_BYTE(currNode->id + ASCII_DIGIT_OFFSET);
+						SEND_SERIAL_BYTE('#');
+						SEND_SERIAL_MSG("ERROR#");
+						if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x01){
+							/*
+							 * ACC_INIT_ERROR
+							 */
+							SEND_SERIAL_MSG("ACC_INIT");
+						}
+						else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x02){
+							/*
+							 * GPS_INIT_ERROR
+							 */
+							SEND_SERIAL_MSG("GPS_INIT");
+						}
+						else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x03){
+							/*
+							 * SD_INIT_ERROR
+							 */
+							SEND_SERIAL_MSG("SD_INIT");
+						}else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x04){
+							/*
+							 * NODE_DISCOVERY_ERROR
+							 */
+							SEND_SERIAL_MSG("NODE_DISCOVERY");
+						}else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x05){
+							/*
+							 * LIST_FUNCTION_ERROR
+							 */
+							SEND_SERIAL_MSG("LIST_FUNCTION()");
+						}
+						else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x06){
+							/*
+							 * LIST_FUNCTION_ERROR
+							 */
+							SEND_SERIAL_MSG("LIST_SORTING()");
+						}
+						else if(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] == 0x07){
+							/*
+							 * LIST_FUNCTION_ERROR
+							 */
+							SEND_SERIAL_MSG("NO_NODES_FOUND");
+						}
+
+						SEND_SERIAL_MSG("\r\n");
+
+						break;
+					case (0x8B):
+						SEND_SERIAL_MSG("MSG#NODE#");
+						//id
+						SEND_SERIAL_BYTE(currNode->id + ASCII_DIGIT_OFFSET);
+						SEND_SERIAL_BYTE('#');
+						SEND_SERIAL_MSG("POWER_LEVEL#");
+						SEND_SERIAL_BYTE(xbeeReceiveBuffer[XBEE_DATA_TYPE_OFFSET+2] + ASCII_DIGIT_OFFSET);
+						SEND_SERIAL_MSG("\r\n");
+
+					case(0x99):
+
+						askXbeeParam("DB",currNode->id);
 						break;
 					default:
 						break;
@@ -1409,13 +1518,18 @@ int main(void){
  * INTERRUPT ROUTINES
  */
 
-void USART2_IRQHandler(void){
-	if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET){
-		if((gpsReceiveString[gpsReadIterator++] = USART_ReceiveData(USART2)) == '\n'){
-			gpsDataUpdated = true;
-			gpsReadIterator = 0;
-			if(strncmp(gpsReceiveString,"$GPVTG" , 6) == 0)
-				gps_parseGPVTG(gpsReceiveString,velocityString);
+void USART1_IRQHandler(void){
+	if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET){
+
+		Usart1_Send(serialBuffer[packetLenght++] = USART_ReceiveData(USART1));
+		//serialBuffer[packetLenght] = USART_ReceiveData(USART1);
+		if(serialBuffer[packetLenght-1] == '\r' || serialBuffer[packetLenght-1] == '\n'){
+			serialBuffer[packetLenght-1] = '\0';
+			TOGGLE_REDLED_SERIAL();
+			serialUpdated = true;
+			packetLenght = 0;
+			Usart1_Send('\r');
+			Usart1_Send('\n');
 		}
 	}
 }
@@ -1456,18 +1570,6 @@ void EXTI4_15_IRQHandler(void)					//External interrupt handlers
 	}
 }
 
-void TIM14_IRQHandler()
-{
-	if(TIM_GetITStatus(TIM14, TIM_IT_Update) != RESET)
-	{
-		TIM_ClearITPendingBit(TIM14, TIM_IT_Update);
-
-		accBuff[accBuffValue++] = returnX_axis();
-		if(accBuffValue > ACC_BUFFER_SIZE-1){
-			accBuffValue = 0;
-		}
-	}
-}
 
 void TIM15_IRQHandler(){
 
@@ -1477,11 +1579,8 @@ void TIM15_IRQHandler(){
     	/*
     	 * Respond for timer error in 0x8E message
     	 */
-		xbeeGlobalBuffer[0] = 'C';
-		xbeeGlobalBuffer[1] = ' ';
-		xbeeGlobalBuffer[2] = 0x8E;
-		xbeeGlobalBuffer[3] = '\0';
-		transmitRequest(SERIAL_ADDR_HIGH,SERIAL_ADDR_LOW,TRANSOPT_DISACK, 0x00,xbeeGlobalBuffer);
+		SEND_SERIAL_MSG("0#TIM_DNG#\r\n");
+		SEND_SERIAL_MSG("\r\n");
 		/*
 		 * Turn off interrupt, set to defaults
 		 */
